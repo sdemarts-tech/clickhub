@@ -1,0 +1,1 @@
+<link rel="stylesheet" href="css/style.css?v=<?php echo filemtime('css/style.css'); ?>">

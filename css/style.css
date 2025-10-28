@@ -613,4 +613,17 @@ footer {
     .auth-box {
         padding: 20px;
     }
+
+.game-play-content {
+    padding: 0;
+}
+
+.game-container {
+    padding: 0;
+}
+
+.game-container iframe {
+    height: 780px;
+}
+
 }

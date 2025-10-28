@@ -13,7 +13,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_game'])) {
     $name = sanitize($_POST['name']);
     $description = sanitize($_POST['description']);
     $file_path = sanitize($_POST['file_path']);
-    $points_reward = intval($_POST['points_reward']);
+    $min_score_required = intval($_POST['min_score_required']);
+    $play_cooldown_minutes = intval($_POST['play_cooldown_minutes']);
+    $max_plays_per_day = intval($_POST['max_plays_per_day']);
     
     if (empty($name) || empty($file_path)) {
         $error = 'Name and file path are required';
@@ -22,7 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_game'])) {
             'name' => $name,
             'description' => $description,
             'file_path' => $file_path,
-            'points_reward' => $points_reward,
+            'scoring_type' => 'score-based',
+            'min_score_required' => $min_score_required,
+            'play_cooldown_minutes' => $play_cooldown_minutes,
+            'max_plays_per_day' => $max_plays_per_day,
             'status' => 'active'
         ];
         
@@ -35,6 +40,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_game'])) {
         } else {
             $error = 'Error adding game: ' . $result['error'];
         }
+    }
+}
+
+// Handle edit game
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_game'])) {
+    $gameId = sanitize($_POST['game_id']);
+    $name = sanitize($_POST['name']);
+    $description = sanitize($_POST['description']);
+    $file_path = sanitize($_POST['file_path']);
+    $min_score_required = intval($_POST['min_score_required']);
+    $play_cooldown_minutes = intval($_POST['play_cooldown_minutes']);
+    $max_plays_per_day = intval($_POST['max_plays_per_day']);
+    
+    if (empty($name) || empty($file_path)) {
+        $error = 'Name and file path are required';
+    } else {
+        $gameData = [
+            'name' => $name,
+            'description' => $description,
+            'file_path' => $file_path,
+            'min_score_required' => $min_score_required,
+            'play_cooldown_minutes' => $play_cooldown_minutes,
+            'max_plays_per_day' => $max_plays_per_day
+        ];
+        
+        $result = $supabase->update(TABLE_GAMES, $gameData, ['id' => $gameId]);
+        
+        if (!isset($result['error'])) {
+            setSuccessMessage('Game updated successfully!');
+            header('Location: manage-games.php');
+            exit;
+        } else {
+            $error = 'Error updating game: ' . $result['error'];
+        }
+    }
+}
+
+// Check if editing a game
+$editGame = null;
+if (isset($_GET['edit'])) {
+    $editId = sanitize($_GET['edit']);
+    $editResult = $supabase->select(TABLE_GAMES, '*', ['id' => $editId]);
+    if (!empty($editResult) && !isset($editResult['error'])) {
+        $editGame = $editResult[0];
     }
 }
 
@@ -94,34 +143,71 @@ if (isset($games['error'])) {
             <?php endif; ?>
 
             <div class="form-section">
-                <h2>Add New Game</h2>
+                <h2><?php echo $editGame ? 'Edit Game' : 'Add New Game'; ?></h2>
+                <?php if ($editGame): ?>
+                    <div class="info-message" style="margin-bottom: 20px;">
+                        Editing: <strong><?php echo htmlspecialchars($editGame['name']); ?></strong>
+                        <a href="manage-games.php" class="btn btn-small" style="float:right;">Cancel Edit</a>
+                    </div>
+                <?php endif; ?>
+                
                 <form method="POST" action="" class="admin-form">
+                    <?php if ($editGame): ?>
+                        <input type="hidden" name="game_id" value="<?php echo $editGame['id']; ?>">
+                    <?php endif; ?>
+                    
                     <div class="form-row">
                         <div class="form-group">
                             <label for="name">Game Name *</label>
-                            <input type="text" id="name" name="name" required>
+                            <input type="text" id="name" name="name" 
+                                   value="<?php echo $editGame ? htmlspecialchars($editGame['name']) : ''; ?>" required>
                         </div>
                         
                         <div class="form-group">
-                            <label for="points_reward">Points Reward *</label>
-                            <input type="number" id="points_reward" name="points_reward" 
-                                   value="<?php echo POINTS_PER_GAME; ?>" required min="1">
+                            <label for="min_score_required">Minimum Score Required *</label>
+                            <input type="number" id="min_score_required" name="min_score_required" 
+                                   value="<?php echo $editGame ? $editGame['min_score_required'] : 10; ?>" required min="0">
+                            <small>Players must reach this score to earn points</small>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="play_cooldown_minutes">Cooldown (minutes) *</label>
+                            <input type="number" id="play_cooldown_minutes" name="play_cooldown_minutes" 
+                                   value="<?php echo $editGame ? $editGame['play_cooldown_minutes'] : 60; ?>" required min="1">
+                            <small>Time before player can replay this game</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="max_plays_per_day">Max Plays Per Day *</label>
+                            <input type="number" id="max_plays_per_day" name="max_plays_per_day" 
+                                   value="<?php echo $editGame ? ($editGame['max_plays_per_day'] ?? 3) : 3; ?>" required min="1">
+                            <small>How many times this game can be played per day</small>
                         </div>
                     </div>
                     
                     <div class="form-group">
                         <label for="description">Description</label>
-                        <textarea id="description" name="description" rows="3"></textarea>
+                        <textarea id="description" name="description" rows="3"><?php echo $editGame ? htmlspecialchars($editGame['description']) : ''; ?></textarea>
                     </div>
                     
                     <div class="form-group">
                         <label for="file_path">File Path (URL or local path) *</label>
                         <input type="text" id="file_path" name="file_path" 
+                               value="<?php echo $editGame ? htmlspecialchars($editGame['file_path']) : ''; ?>"
                                placeholder="games/snake.html" required>
                         <small>Example: games/snake.html or https://example.com/game.html</small>
                     </div>
                     
-                    <button type="submit" name="add_game" class="btn btn-primary">Add Game</button>
+                    <div class="info-box" style="margin-top:15px; background:#e7f3ff; padding:15px; border-radius:5px;">
+                        <strong>ℹ️ Note:</strong> Players earn points equal to their game score. 
+                        Make sure your game sends the score via postMessage when game ends.
+                    </div>
+                    
+                    <button type="submit" name="<?php echo $editGame ? 'edit_game' : 'add_game'; ?>" class="btn btn-primary">
+                        <?php echo $editGame ? '💾 Update Game' : 'Add Game'; ?>
+                    </button>
                 </form>
             </div>
 
@@ -135,8 +221,9 @@ if (isset($games['error'])) {
                             <thead>
                                 <tr>
                                     <th>Name</th>
-                                    <th>Description</th>
-                                    <th>Points</th>
+                                    <th>Min Score</th>
+                                    <th>Cooldown</th>
+                                    <th>Plays/Day</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -144,9 +231,13 @@ if (isset($games['error'])) {
                             <tbody>
                                 <?php foreach ($games as $game): ?>
                                     <tr>
-                                        <td><?php echo htmlspecialchars($game['name']); ?></td>
-                                        <td><?php echo htmlspecialchars($game['description']); ?></td>
-                                        <td><?php echo $game['points_reward']; ?> pts</td>
+                                        <td>
+                                            <strong><?php echo htmlspecialchars($game['name']); ?></strong><br>
+                                            <small><?php echo htmlspecialchars(substr($game['description'], 0, 50)); ?>...</small>
+                                        </td>
+                                        <td><?php echo $game['min_score_required'] ?? 0; ?></td>
+                                        <td><?php echo $game['play_cooldown_minutes'] ?? 60; ?> min</td>
+                                        <td><?php echo $game['max_plays_per_day'] ?? 3; ?></td>
                                         <td>
                                             <?php if ($game['status'] === 'active'): ?>
                                                 <span class="badge-success">Active</span>
@@ -155,6 +246,10 @@ if (isset($games['error'])) {
                                             <?php endif; ?>
                                         </td>
                                         <td class="actions">
+                                            <a href="?edit=<?php echo $game['id']; ?>" 
+                                               class="btn btn-small btn-secondary">
+                                                ✏️ Edit
+                                            </a>
                                             <a href="?toggle=<?php echo $game['status']; ?>&id=<?php echo $game['id']; ?>" 
                                                class="btn btn-small">
                                                 <?php echo $game['status'] === 'active' ? 'Deactivate' : 'Activate'; ?>

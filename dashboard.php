@@ -17,6 +17,9 @@ $referralLink = SITE_URL . 'signup.php?ref=' . urlencode($_SESSION['username']);
 // Count today's activities
 $todayCaptchaCount = getTodayCaptchaCount($_SESSION['user_id']);
 $captchaRemaining = DAILY_CAPTCHA_LIMIT - $todayCaptchaCount;
+
+$todayGamePlays = getTodayGamePlaysCount($_SESSION['user_id']);
+$gamesRemaining = getRemainingGamePlays($_SESSION['user_id']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -24,7 +27,7 @@ $captchaRemaining = DAILY_CAPTCHA_LIMIT - $todayCaptchaCount;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - <?php echo SITE_NAME; ?></title>
-    <?php include 'includes/header-links.php'; ?>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div class="container">
@@ -61,6 +64,14 @@ $captchaRemaining = DAILY_CAPTCHA_LIMIT - $todayCaptchaCount;
                 </div>
                 
                 <div class="stat-card">
+                    <div class="stat-icon">🎮</div>
+                    <div class="stat-info">
+                        <h3><?php echo $gamesRemaining; ?></h3>
+                        <p>Games Remaining Today</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
                     <div class="stat-icon">🤖</div>
                     <div class="stat-info">
                         <h3><?php echo $captchaRemaining; ?></h3>
@@ -72,8 +83,13 @@ $captchaRemaining = DAILY_CAPTCHA_LIMIT - $todayCaptchaCount;
             <div class="action-grid">
                 <div class="action-card">
                     <h2>🎮 Play Games</h2>
-                    <p>Earn <?php echo POINTS_PER_GAME; ?> points per game</p>
-                    <a href="games.php" class="btn btn-primary">Browse Games</a>
+                    <p>Earn points equal to your score!</p>
+                    <p><strong><?php echo $todayGamePlays; ?> / <?php echo DAILY_GAME_LIMIT; ?></strong> games played today</p>
+                    <?php if ($gamesRemaining > 0): ?>
+                        <a href="games.php" class="btn btn-primary">Browse Games</a>
+                    <?php else: ?>
+                        <button class="btn btn-disabled" disabled>Daily Limit Reached</button>
+                    <?php endif; ?>
                 </div>
                 
                 <div class="action-card">
@@ -93,6 +109,12 @@ $captchaRemaining = DAILY_CAPTCHA_LIMIT - $todayCaptchaCount;
                         <input type="text" value="<?php echo $referralLink; ?>" id="referralLink" readonly>
                         <button onclick="copyReferralLink()" class="btn btn-secondary">Copy Link</button>
                     </div>
+                </div>
+                
+                <div class="action-card">
+                    <h2>🏆 Leaderboard</h2>
+                    <p>See top players and your ranking</p>
+                    <a href="leaderboard.php" class="btn btn-primary">View Leaderboard</a>
                 </div>
             </div>
 

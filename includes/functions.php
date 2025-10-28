@@ -197,4 +197,262 @@ function getTodayCaptchaCount($userId) {
     $result = json_decode($response, true);
     return count($result);
 }
+
+// ============================================
+// GAME SYSTEM FUNCTIONS
+// ============================================
+
+// Get today's game plays count (across all games)
+function getTodayGamePlaysCount($userId) {
+    global $supabase;
+    
+    $today = date('Y-m-d');
+    $url = SUPABASE_URL . '/rest/v1/' . TABLE_GAME_PLAYS . '?user_id=eq.' . $userId . '&played_at=gte.' . $today . 'T00:00:00';
+    
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'apikey: ' . SUPABASE_ANON_KEY,
+        'Authorization: Bearer ' . SUPABASE_ANON_KEY
+    ]);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    $result = json_decode($response, true);
+    return count($result);
+}
+
+// Check if user can play more games today
+function canPlayGameToday($userId) {
+    return getTodayGamePlaysCount($userId) < DAILY_GAME_LIMIT;
+}
+
+// Get remaining game plays for today
+function getRemainingGamePlays($userId) {
+    $played = getTodayGamePlaysCount($userId);
+    $remaining = DAILY_GAME_LIMIT - $played;
+    return max(0, $remaining);
+}
+
+// Check if user can play a specific game (cooldown check)
+function canPlayGame($userId, $gameId) {
+    global $supabase;
+    
+    // Get game cooldown settings
+    $gameResult = $supabase->select(TABLE_GAMES, 'play_cooldown_minutes', ['id' => $gameId]);
+    if (empty($gameResult) || isset($gameResult['error'])) {
+        return false;
+    }
+    
+    $cooldownMinutes = $gameResult[0]['play_cooldown_minutes'] ?? 60;
+    
+    // Get last play time for this specific game
+    $url = SUPABASE_URL . '/rest/v1/' . TABLE_GAME_PLAYS . 
+           '?user_id=eq.' . $userId . 
+           '&game_id=eq.' . $gameId . 
+           '&order=played_at.desc&limit=1';
+    
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'apikey: ' . SUPABASE_ANON_KEY,
+        'Authorization: Bearer ' . SUPABASE_ANON_KEY
+    ]);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    $result = json_decode($response, true);
+    
+    if (empty($result)) {
+        return true; // Never played before
+    }
+    
+    $lastPlayTime = strtotime($result[0]['played_at']);
+    $cooldownSeconds = $cooldownMinutes * 60;
+    $nextAvailableTime = $lastPlayTime + $cooldownSeconds;
+    
+    return time() >= $nextAvailableTime;
+}
+
+// Get today's play count for a specific game
+function getTodayGamePlaysForGame($userId, $gameId) {
+    global $supabase;
+    
+    $today = date('Y-m-d');
+    $url = SUPABASE_URL . '/rest/v1/' . TABLE_GAME_PLAYS . 
+           '?user_id=eq.' . $userId . 
+           '&game_id=eq.' . $gameId . 
+           '&played_at=gte.' . $today . 'T00:00:00';
+    
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'apikey: ' . SUPABASE_ANON_KEY,
+        'Authorization: Bearer ' . SUPABASE_ANON_KEY
+    ]);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    $result = json_decode($response, true);
+    return count($result);
+}
+
+// Check if user has reached per-game daily limit
+function hasReachedGameDailyLimit($userId, $gameId, $maxPlaysPerDay) {
+    $playsToday = getTodayGamePlaysForGame($userId, $gameId);
+    return $playsToday >= $maxPlaysPerDay;
+}
+
+// Get remaining plays for a specific game today
+function getRemainingGamePlaysForGame($userId, $gameId, $maxPlaysPerDay) {
+    $playsToday = getTodayGamePlaysForGame($userId, $gameId);
+    $remaining = $maxPlaysPerDay - $playsToday;
+    return max(0, $remaining);
+}
+
+// Get time until game is available (in minutes)
+function getGameCooldownRemaining($userId, $gameId) {
+    global $supabase;
+    
+    // Get game cooldown settings
+    $gameResult = $supabase->select(TABLE_GAMES, 'play_cooldown_minutes', ['id' => $gameId]);
+    if (empty($gameResult) || isset($gameResult['error'])) {
+        return 0;
+    }
+    
+    $cooldownMinutes = $gameResult[0]['play_cooldown_minutes'] ?? 60;
+    
+    // Get last play time
+    $url = SUPABASE_URL . '/rest/v1/' . TABLE_GAME_PLAYS . 
+           '?user_id=eq.' . $userId . 
+           '&game_id=eq.' . $gameId . 
+           '&order=played_at.desc&limit=1';
+    
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'apikey: ' . SUPABASE_ANON_KEY,
+        'Authorization: Bearer ' . SUPABASE_ANON_KEY
+    ]);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    $result = json_decode($response, true);
+    
+    if (empty($result)) {
+        return 0; // Never played
+    }
+    
+    $lastPlayTime = strtotime($result[0]['played_at']);
+    $cooldownSeconds = $cooldownMinutes * 60;
+    $nextAvailableTime = $lastPlayTime + $cooldownSeconds;
+    $remainingSeconds = $nextAvailableTime - time();
+    
+    return max(0, ceil($remainingSeconds / 60));
+}
+
+// Get user's best score for a game
+function getUserBestScore($userId, $gameId) {
+    global $supabase;
+    
+    $url = SUPABASE_URL . '/rest/v1/game_best_scores?user_id=eq.' . $userId . '&game_id=eq.' . $gameId;
+    
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'apikey: ' . SUPABASE_ANON_KEY,
+        'Authorization: Bearer ' . SUPABASE_ANON_KEY
+    ]);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    $result = json_decode($response, true);
+    
+    return !empty($result) ? $result[0]['best_score'] : 0;
+}
+
+// Update user's best score if new score is higher
+function updateBestScore($userId, $gameId, $newScore) {
+    global $supabase;
+    
+    $currentBest = getUserBestScore($userId, $gameId);
+    
+    if ($newScore > $currentBest) {
+        $data = [
+            'user_id' => $userId,
+            'game_id' => $gameId,
+            'best_score' => $newScore,
+            'achieved_at' => date('Y-m-d H:i:s')
+        ];
+        
+        // Try to insert, if exists it will fail, then update
+        $result = $supabase->insert('game_best_scores', $data);
+        
+        if (isset($result['error'])) {
+            // Already exists, update instead
+            $url = SUPABASE_URL . '/rest/v1/game_best_scores?user_id=eq.' . $userId . '&game_id=eq.' . $gameId;
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'apikey: ' . SUPABASE_SERVICE_KEY,
+                'Authorization: Bearer ' . SUPABASE_SERVICE_KEY,
+                'Content-Type: application/json',
+                'Prefer: return=representation'
+            ]);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+                'best_score' => $newScore,
+                'achieved_at' => date('Y-m-d H:i:s')
+            ]));
+            
+            curl_exec($ch);
+            curl_close($ch);
+        }
+        
+        return true;
+    }
+    
+    return false;
+}
+
+// Generate unique session ID for game play
+function generateGameSessionId() {
+    return uniqid('session_', true) . '_' . bin2hex(random_bytes(16));
+}
+
+// Validate game session
+function isValidGameSession($sessionId) {
+    global $supabase;
+    
+    // Check if session has already been used
+    $result = $supabase->select(TABLE_GAME_PLAYS, 'id', ['session_id' => $sessionId]);
+    
+    return empty($result) || isset($result['error']);
+}
+
+// Format time remaining
+function formatTimeRemaining($minutes) {
+    if ($minutes < 1) {
+        return 'Available now';
+    } elseif ($minutes < 60) {
+        return $minutes . ' minute' . ($minutes != 1 ? 's' : '');
+    } else {
+        $hours = floor($minutes / 60);
+        $mins = $minutes % 60;
+        return $hours . ' hour' . ($hours != 1 ? 's' : '') . 
+               ($mins > 0 ? ' ' . $mins . ' min' : '');
+    }
+}
 ?>

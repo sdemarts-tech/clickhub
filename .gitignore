@@ -1,0 +1,13 @@
+```
+
+**Type these lines:**
+```
+includes/config.php
+includes/supabase.php
+config.php
+supabase.php```
+
+Then type these lines:
+```
+config.php
+supabase.php

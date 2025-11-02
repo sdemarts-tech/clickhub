@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fruit Slicer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #FFA07A 0%, #FF6B6B 50%, #FF8C42 100%);
+            font-family: 'Arial Black', Arial, sans-serif;
+            color: white;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            overflow: hidden;
+        }
+        
+        #gameContainer {
+            position: relative;
+            max-width: 100%;
+            padding: 10px;
+        }
+        
+        #gameCanvas {
+            border: 4px solid #fff;
+            border-radius: 20px;
+            background: linear-gradient(180deg, #87CEEB 0%, #98D8E8 100%);
+            display: block;
+            touch-action: none;
+            max-width: 100%;
+            height: auto;
+            cursor: crosshair;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 15px 0;
+            font-size: 1.3em;
+            gap: 20px;
+            flex-wrap: wrap;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .info-item {
+            background: rgba(255,255,255,0.3);
+            padding: 12px 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.5);
+            font-weight: bold;
+        }
+        
+        .controls {
+            margin: 15px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            background: rgba(255,255,255,0.9);
+            color: #FF6B6B;
+            border: 3px solid white;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(0,0,0,0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .instructions {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.95em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            max-width: 90%;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.4);
+            letter-spacing: 2px;
+        }
+
+        .lives {
+            color: #FF0000;
+            font-size: 1.5em;
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .info {
+                font-size: 1em;
+            }
+            
+            button {
+                padding: 12px 24px;
+                font-size: 1em;
+            }
+        }
+        
+        #gameOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .game-over-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            border: 4px solid white;
+        }
+        
+        .game-over-content h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        @media (max-width: 480px) {
+            .game-over-content {
+                padding: 30px 20px;
+            }
+            
+            .game-over-content h2 {
+                font-size: 1.8em;
+            }
+        }
+        
+        .game-over-content p {
+            font-size: 1.3em;
+            margin: 10px 0;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .game-over-content .big-score {
+            font-size: 2em;
+            font-weight: bold;
+            color: #FFD700;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .game-over-content button {
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <h1>🍉 FRUIT SLICER 🍎</h1>
+    
+    <div id="gameOverlay">
+        <div class="game-over-content">
+            <h2>🎮 GAME OVER 🎮</h2>
+            <p>Game Score:</p>
+            <div class="big-score" id="finalScore">0</div>
+            <p>Platform Points Earned:</p>
+            <div class="big-score" id="platformPoints">0</div>
+            <p style="font-size: 0.9em; opacity: 0.9;">(1 point per 5,000 game score)</p>
+            <button onclick="closeGameOver()" style="background: white; color: #FF6B6B;">🎯 Play Again</button>
+            <p style="margin-top: 20px; font-size: 1em;">Click "Complete Game" button below to claim your points!</p>
+        </div>
+    </div>
+    
+    <div id="gameContainer">
+        <div class="info">
+            <div class="info-item">Score: <span id="score">0</span></div>
+            <div class="info-item lives">Lives: <span id="lives">10</span> ❤️</div>
+            <div class="info-item">Combo: <span id="combo">0</span>x</div>
+        </div>
+        
+        <canvas id="gameCanvas" width="400" height="600"></canvas>
+        
+        <div class="controls">
+            <button onclick="startGame()">🎮 Start Game</button>
+            <button onclick="pauseGame()">⏸️ Pause</button>
+        </div>
+        
+        <div class="instructions">
+            <p><strong>🖱️ Desktop:</strong> Click and drag to slice</p>
+            <p><strong>📱 Mobile:</strong> Swipe to slice fruits</p>
+            <p><strong>🍎 Slice fruits:</strong> +10 points | <strong>💣 Avoid bombs:</strong> -20 points & -1 life</p>
+            <p><strong>❤️ You have 10 lives</strong> - Don't miss fruits or hit bombs!</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Fruit drawing functions
+        function drawApple(ctx, x, y, size) {
+            // Red body
+            ctx.fillStyle = '#FF1744';
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Shine
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.beginPath();
+            ctx.arc(x - size * 0.3, y - size * 0.3, size * 0.35, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Stem
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = size * 0.08;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(x, y - size);
+            ctx.lineTo(x + size * 0.15, y - size * 1.2);
+            ctx.stroke();
+            
+            // Leaf
+            ctx.fillStyle = '#4CAF50';
+            ctx.beginPath();
+            ctx.ellipse(x + size * 0.3, y - size * 1.1, size * 0.25, size * 0.15, Math.PI / 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        function drawOrange(ctx, x, y, size) {
+            // Orange body
+            ctx.fillStyle = '#FF6D00';
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Texture dots
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            for (let i = 0; i < 20; i++) {
+                let angle = Math.random() * Math.PI * 2;
+                let distance = Math.random() * size * 0.7;
+                let dotX = x + Math.cos(angle) * distance;
+                let dotY = y + Math.sin(angle) * distance;
+                ctx.beginPath();
+                ctx.arc(dotX, dotY, size * 0.05, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Shine
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.beginPath();
+            ctx.arc(x - size * 0.3, y - size * 0.3, size * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        function drawWatermelon(ctx, x, y, size) {
+            // Green outer
+            ctx.fillStyle = '#2E7D32';
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Dark green stripes
+            ctx.strokeStyle = '#1B5E20';
+            ctx.lineWidth = size * 0.15;
+            for (let i = 0; i < 4; i++) {
+                let angle = (i * Math.PI) / 2;
+                ctx.beginPath();
+                ctx.arc(x, y, size * 0.8, angle - 0.3, angle + 0.3);
+                ctx.stroke();
+            }
+            
+            // Shine
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+            ctx.beginPath();
+            ctx.arc(x - size * 0.3, y - size * 0.3, size * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        function drawBanana(ctx, x, y, size) {
+            // Yellow curved body
+            ctx.fillStyle = '#FFEA00';
+            ctx.beginPath();
+            ctx.ellipse(x, y, size * 0.9, size * 0.4, -Math.PI / 6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Brown spots
+            ctx.fillStyle = 'rgba(139, 69, 19, 0.4)';
+            for (let i = 0; i < 3; i++) {
+                let spotX = x + (i - 1) * size * 0.3;
+                let spotY = y + Math.random() * size * 0.2 - size * 0.1;
+                ctx.beginPath();
+                ctx.ellipse(spotX, spotY, size * 0.1, size * 0.08, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.beginPath();
+            ctx.ellipse(x - size * 0.2, y - size * 0.1, size * 0.3, size * 0.15, -Math.PI / 6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        function drawGrapes(ctx, x, y, size) {
+            // Draw cluster of purple circles
+            ctx.fillStyle = '#7B1FA2';
+            const positions = [
+                [0, -0.4], [-0.3, -0.2], [0.3, -0.2],
+                [-0.3, 0.1], [0, 0.1], [0.3, 0.1],
+                [0, 0.4]
+            ];
+            
+            positions.forEach(([offsetX, offsetY]) => {
+                let grapeX = x + offsetX * size;
+                let grapeY = y + offsetY * size;
+                ctx.beginPath();
+                ctx.arc(grapeX, grapeY, size * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Shine on each grape
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.beginPath();
+                ctx.arc(grapeX - size * 0.1, grapeY - size * 0.1, size * 0.12, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#7B1FA2';
+            });
+        }
+        
+        function drawStrawberry(ctx, x, y, size) {
+            // Red heart-like shape
+            ctx.fillStyle = '#FF1744';
+            ctx.beginPath();
+            ctx.moveTo(x, y + size * 0.6);
+            ctx.quadraticCurveTo(x - size, y - size * 0.3, x, y - size * 0.5);
+            ctx.quadraticCurveTo(x + size, y - size * 0.3, x, y + size * 0.6);
+            ctx.fill();
+            
+            // Seeds
+            ctx.fillStyle = '#FFD600';
+            for (let i = 0; i < 8; i++) {
+                let angle = Math.random() * Math.PI * 2;
+                let distance = Math.random() * size * 0.4;
+                let seedX = x + Math.cos(angle) * distance;
+                let seedY = y + Math.sin(angle) * distance;
+                ctx.beginPath();
+                ctx.arc(seedX, seedY, size * 0.06, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Green leaf
+            ctx.fillStyle = '#4CAF50';
+            ctx.beginPath();
+            ctx.moveTo(x - size * 0.4, y - size * 0.5);
+            ctx.lineTo(x - size * 0.2, y - size * 0.7);
+            ctx.lineTo(x, y - size * 0.5);
+            ctx.lineTo(x + size * 0.2, y - size * 0.7);
+            ctx.lineTo(x + size * 0.4, y - size * 0.5);
+            ctx.fill();
+        }
+        
+        function drawLemon(ctx, x, y, size) {
+            // Yellow oval
+            ctx.fillStyle = '#FFD600';
+            ctx.beginPath();
+            ctx.ellipse(x, y, size, size * 0.85, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Texture
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            for (let i = 0; i < 15; i++) {
+                let angle = Math.random() * Math.PI * 2;
+                let distance = Math.random() * size * 0.6;
+                let dotX = x + Math.cos(angle) * distance;
+                let dotY = y + Math.sin(angle) * distance * 0.85;
+                ctx.beginPath();
+                ctx.arc(dotX, dotY, size * 0.04, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Shine
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.beginPath();
+            ctx.arc(x - size * 0.3, y - size * 0.2, size * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        function drawKiwi(ctx, x, y, size) {
+            // Brown fuzzy outside
+            ctx.fillStyle = '#795548';
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Fuzzy texture
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.lineWidth = size * 0.03;
+            for (let i = 0; i < 30; i++) {
+                let angle = Math.random() * Math.PI * 2;
+                let startDist = size * 0.7;
+                let endDist = size * 0.95;
+                ctx.beginPath();
+                ctx.moveTo(x + Math.cos(angle) * startDist, y + Math.sin(angle) * startDist);
+                ctx.lineTo(x + Math.cos(angle) * endDist, y + Math.sin(angle) * endDist);
+                ctx.stroke();
+            }
+            
+            // Shine
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.beginPath();
+            ctx.arc(x - size * 0.3, y - size * 0.3, size * 0.25, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        function drawBomb(ctx, x, y, size) {
+            // Black sphere
+            ctx.fillStyle = '#212121';
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.beginPath();
+            ctx.arc(x - size * 0.3, y - size * 0.3, size * 0.35, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Fuse
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = size * 0.12;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(x + size * 0.7, y - size * 0.7);
+            ctx.lineTo(x + size * 0.9, y - size * 1);
+            ctx.stroke();
+            
+            // Spark
+            ctx.fillStyle = '#FF5722';
+            ctx.beginPath();
+            ctx.arc(x + size * 0.9, y - size, size * 0.15, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#FFC107';
+            ctx.beginPath();
+            ctx.arc(x + size * 0.9, y - size, size * 0.08, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Game constants
+        const FRUITS = [
+            { name: 'apple', draw: drawApple, color: '#FF1744' },
+            { name: 'orange', draw: drawOrange, color: '#FF6D00' },
+            { name: 'watermelon', draw: drawWatermelon, color: '#F50057' },
+            { name: 'banana', draw: drawBanana, color: '#FFEA00' },
+            { name: 'grapes', draw: drawGrapes, color: '#D500F9' },
+            { name: 'strawberry', draw: drawStrawberry, color: '#FF1744' },
+            { name: 'lemon', draw: drawLemon, color: '#FFD600' },
+            { name: 'kiwi', draw: drawKiwi, color: '#76FF03' }
+        ];
+        
+        // Game state
+        let score = 0;
+        let lives = 10;
+        let combo = 0;
+        let gameRunning = false;
+        let objects = [];
+        let particles = [];
+        let slashTrail = [];
+        let animationId = null;
+        let lastComboTime = 0;
+        let spawnTimer = 0;
+        let difficulty = 1;
+        let lastDifficultyScore = 0;
+        
+        // Mouse/Touch tracking
+        let isSlashing = false;
+        let slashPoints = [];
+        
+        // Initialize game
+        function initGame() {
+            score = 0;
+            lives = 10;
+            combo = 0;
+            objects = [];
+            particles = [];
+            slashTrail = [];
+            difficulty = 1;
+            spawnTimer = 0;
+            lastDifficultyScore = 0;
+            updateUI();
+        }
+        
+        function startGame() {
+            if (!gameRunning) {
+                initGame();
+                gameRunning = true;
+                gameLoop();
+            }
+        }
+        
+        function pauseGame() {
+            if (gameRunning) {
+                gameRunning = false;
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                }
+            }
+        }
+        
+        function gameLoop() {
+            if (!gameRunning) return;
+            
+            try {
+                update();
+                draw();
+            } catch (e) {
+                console.error('Game error:', e);
+            }
+            
+            animationId = requestAnimationFrame(gameLoop);
+        }
+        
+        function update() {
+            const currentTime = Date.now();
+            
+            // Spawn objects
+            spawnTimer++;
+            const spawnRate = Math.max(30 - Math.floor(difficulty) * 2, 15);
+            
+            if (spawnTimer >= spawnRate) {
+                spawnObject();
+                spawnTimer = 0;
+            }
+            
+            // Update objects
+            for (let i = objects.length - 1; i >= 0; i--) {
+                if (i >= objects.length) continue;
+                
+                let obj = objects[i];
+                if (!obj) continue;
+                
+                obj.x += obj.vx;
+                obj.y += obj.vy;
+                obj.vy += 0.5;
+                obj.rotation += obj.rotationSpeed;
+                
+                if (obj.y > canvas.height + 100) {
+                    if (obj.type === 'fruit' && !obj.sliced) {
+                        lives--;
+                        updateUI();
+                        createMissParticles(obj);
+                        
+                        if (lives <= 0) {
+                            gameOver();
+                        }
+                    }
+                    objects.splice(i, 1);
+                }
+            }
+            
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                if (i >= particles.length) continue;
+                
+                let p = particles[i];
+                if (!p) continue;
+                
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.3;
+                p.life--;
+                p.opacity = p.life / p.maxLife;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+            
+            // Update slash trail
+            for (let i = slashTrail.length - 1; i >= 0; i--) {
+                if (i >= slashTrail.length) continue;
+                
+                if (slashTrail[i]) {
+                    slashTrail[i].life--;
+                    slashTrail[i].opacity = slashTrail[i].life / 20;
+                    
+                    if (slashTrail[i].life <= 0) {
+                        slashTrail.splice(i, 1);
+                    }
+                }
+            }
+            
+            if (currentTime - lastComboTime > 2000 && combo > 0) {
+                combo = 0;
+                updateUI();
+            }
+            
+            if (score > lastDifficultyScore && score >= lastDifficultyScore + 200) {
+                lastDifficultyScore = score;
+                difficulty = Math.min(difficulty + 0.2, 5);
+            }
+        }
+        
+        function spawnObject() {
+            if (objects.length >= 15) return;
+            
+            const isBomb = Math.random() < 0.15;
+            
+            const x = Math.random() * (canvas.width - 100) + 50;
+            const vx = (Math.random() - 0.5) * 6;
+            const vy = -(Math.random() * 8 + 15);
+            
+            if (isBomb) {
+                objects.push({
+                    type: 'bomb',
+                    x: x,
+                    y: canvas.height,
+                    vx: vx,
+                    vy: vy,
+                    size: 40,
+                    draw: drawBomb,
+                    color: '#212121',
+                    rotation: 0,
+                    rotationSpeed: (Math.random() - 0.5) * 0.2,
+                    sliced: false
+                });
+            } else {
+                const fruit = FRUITS[Math.floor(Math.random() * FRUITS.length)];
+                objects.push({
+                    type: 'fruit',
+                    x: x,
+                    y: canvas.height,
+                    vx: vx,
+                    vy: vy,
+                    size: 45,
+                    draw: fruit.draw,
+                    color: fruit.color,
+                    name: fruit.name,
+                    rotation: 0,
+                    rotationSpeed: (Math.random() - 0.5) * 0.2,
+                    sliced: false
+                });
+            }
+        }
+        
+        function checkSlice() {
+            if (slashPoints.length < 2) return;
+            
+            for (let i = 0; i < objects.length; i++) {
+                let obj = objects[i];
+                if (!obj || obj.sliced) continue;
+                
+                for (let j = 0; j < slashPoints.length - 1; j++) {
+                    if (j >= slashPoints.length - 1) break;
+                    
+                    let p1 = slashPoints[j];
+                    let p2 = slashPoints[j + 1];
+                    
+                    if (!p1 || !p2) continue;
+                    
+                    if (lineCircleIntersect(p1.x, p1.y, p2.x, p2.y, obj.x, obj.y, obj.size)) {
+                        sliceObject(obj);
+                        break;
+                    }
+                }
+            }
+        }
+        
+        function lineCircleIntersect(x1, y1, x2, y2, cx, cy, radius) {
+            let dx = x2 - x1;
+            let dy = y2 - y1;
+            let fx = x1 - cx;
+            let fy = y1 - cy;
+            
+            let a = dx * dx + dy * dy;
+            
+            if (a < 0.0001) {
+                let distSq = fx * fx + fy * fy;
+                return distSq <= radius * radius;
+            }
+            
+            let b = 2 * (fx * dx + fy * dy);
+            let c = (fx * fx + fy * fy) - radius * radius;
+            
+            let discriminant = b * b - 4 * a * c;
+            
+            if (discriminant >= 0) {
+                discriminant = Math.sqrt(discriminant);
+                let t1 = (-b - discriminant) / (2 * a);
+                let t2 = (-b + discriminant) / (2 * a);
+                
+                if ((t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1)) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+        
+        function sliceObject(obj) {
+            obj.sliced = true;
+            
+            if (obj.type === 'fruit') {
+                score += 10;
+                combo++;
+                lastComboTime = Date.now();
+                
+                if (combo > 1) {
+                    score += combo * 2;
+                }
+                
+                createSliceParticles(obj);
+                updateUI();
+            } else if (obj.type === 'bomb') {
+                score -= 20;
+                lives--;
+                combo = 0;
+                createBombExplosion(obj);
+                updateUI();
+                
+                if (lives <= 0) {
+                    gameOver();
+                }
+            }
+        }
+        
+        function createSliceParticles(obj) {
+            if (particles.length > 200) return;
+            
+            for (let i = 0; i < 15; i++) {
+                let angle = Math.random() * Math.PI * 2;
+                let speed = Math.random() * 8 + 3;
+                
+                particles.push({
+                    x: obj.x,
+                    y: obj.y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 3,
+                    color: obj.color,
+                    life: 30,
+                    maxLife: 30,
+                    opacity: 1,
+                    size: Math.random() * 6 + 3
+                });
+            }
+        }
+        
+        function createBombExplosion(obj) {
+            if (particles.length > 200) return;
+            
+            for (let i = 0; i < 30; i++) {
+                let angle = Math.random() * Math.PI * 2;
+                let speed = Math.random() * 12 + 5;
+                
+                particles.push({
+                    x: obj.x,
+                    y: obj.y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 5,
+                    color: ['#FF6B00', '#FF0000', '#FFD700', '#000000'][Math.floor(Math.random() * 4)],
+                    life: 40,
+                    maxLife: 40,
+                    opacity: 1,
+                    size: Math.random() * 8 + 4
+                });
+            }
+        }
+        
+        function createMissParticles(obj) {
+            if (particles.length > 200) return;
+            
+            for (let i = 0; i < 5; i++) {
+                particles.push({
+                    x: canvas.width / 2,
+                    y: canvas.height - 50,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: -Math.random() * 5 - 3,
+                    color: '#999999',
+                    life: 20,
+                    maxLife: 20,
+                    opacity: 1,
+                    size: 8
+                });
+            }
+        }
+        
+        function draw() {
+            // Clear canvas
+            let gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#98D8E8');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw slash trail
+            if (slashTrail.length > 1) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.lineWidth = 8;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                for (let i = 0; i < slashTrail.length - 1; i++) {
+                    let p1 = slashTrail[i];
+                    let p2 = slashTrail[i + 1];
+                    
+                    ctx.globalAlpha = p1.opacity;
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1;
+            }
+            
+            // Draw particles
+            for (let p of particles) {
+                ctx.globalAlpha = p.opacity;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+            
+            // Draw objects
+            for (let obj of objects) {
+                if (!obj || obj.sliced) continue;
+                
+                try {
+                    ctx.save();
+                    ctx.translate(obj.x, obj.y);
+                    ctx.rotate(obj.rotation);
+                    
+                    // Draw shadow
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                    ctx.shadowBlur = 10;
+                    ctx.shadowOffsetX = 3;
+                    ctx.shadowOffsetY = 3;
+                    
+                    // Draw fruit using custom function
+                    obj.draw(ctx, 0, 0, obj.size);
+                    
+                    ctx.restore();
+                } catch (e) {
+                    ctx.restore();
+                }
+            }
+            
+            // Draw combo
+            if (combo > 1) {
+                ctx.font = 'bold 40px Arial';
+                ctx.fillStyle = '#FFD700';
+                ctx.strokeStyle = '#FF6B00';
+                ctx.lineWidth = 3;
+                ctx.textAlign = 'center';
+                ctx.strokeText(`${combo}x COMBO!`, canvas.width / 2, 50);
+                ctx.fillText(`${combo}x COMBO!`, canvas.width / 2, 50);
+            }
+        }
+        
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('lives').textContent = lives;
+            document.getElementById('combo').textContent = combo;
+        }
+        
+        function gameOver() {
+            gameRunning = false;
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            
+            const platformPoints = Math.floor(score / 5000);
+            
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'gameComplete',
+                    score: platformPoints
+                }, '*');
+            }
+            
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('platformPoints').textContent = platformPoints;
+            document.getElementById('gameOverlay').style.display = 'flex';
+        }
+        
+        function closeGameOver() {
+            document.getElementById('gameOverlay').style.display = 'none';
+            startGame();
+        }
+        
+        // Prevent overlay clicks from passing through
+        document.getElementById('gameOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeGameOver();
+            }
+        });
+        
+        // Mouse controls
+        canvas.addEventListener('mousedown', (e) => {
+            if (!gameRunning) return;
+            isSlashing = true;
+            slashPoints = [];
+            
+            let rect = canvas.getBoundingClientRect();
+            slashPoints.push({
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            });
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (!gameRunning || !isSlashing) return;
+            
+            let rect = canvas.getBoundingClientRect();
+            let x = e.clientX - rect.left;
+            let y = e.clientY - rect.top;
+            
+            slashPoints.push({ x, y });
+            slashTrail.push({ x, y, life: 20, opacity: 1 });
+            
+            if (slashPoints.length > 20) slashPoints.shift();
+            if (slashTrail.length > 50) slashTrail.shift();
+            
+            checkSlice();
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            isSlashing = false;
+            slashPoints = [];
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            isSlashing = false;
+            slashPoints = [];
+        });
+        
+        // Touch controls
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!gameRunning) return;
+            isSlashing = true;
+            slashPoints = [];
+            
+            let rect = canvas.getBoundingClientRect();
+            let touch = e.touches[0];
+            slashPoints.push({
+                x: touch.clientX - rect.left,
+                y: touch.clientY - rect.top
+            });
+        });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!gameRunning || !isSlashing) return;
+            
+            let rect = canvas.getBoundingClientRect();
+            let touch = e.touches[0];
+            let x = touch.clientX - rect.left;
+            let y = touch.clientY - rect.top;
+            
+            slashPoints.push({ x, y });
+            slashTrail.push({ x, y, life: 20, opacity: 1 });
+            
+            if (slashPoints.length > 20) slashPoints.shift();
+            if (slashTrail.length > 50) slashTrail.shift();
+            
+            checkSlice();
+        });
+        
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            isSlashing = false;
+            slashPoints = [];
+        });
+        
+        // Responsive canvas
+        function resizeCanvas() {
+            const maxWidth = Math.min(window.innerWidth - 20, 400);
+            const scale = maxWidth / 400;
+            
+            canvas.style.width = maxWidth + 'px';
+            canvas.style.height = (600 * scale) + 'px';
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        // Initial draw
+        draw();
+    </script>
+</body>
+</html>

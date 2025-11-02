@@ -114,7 +114,18 @@ $playsRemaining = getRemainingGamePlaysForGame($_SESSION['user_id'], $gameId, $m
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($game['name']); ?> - <?php echo SITE_NAME; ?></title>
-    <link rel="stylesheet" href="css/style.css">
+   <?php include 'includes/header-links.php'; ?>
+  
+   <script>
+const iframe = document.getElementById('myIframe');
+
+iframe.onload = function() {
+  // Adjust height after iframe content is fully loaded
+  iframe.style.height = iframe.contentWindow.document.body.scrollHeight + 'px';
+};
+</script>
+   
+  
 </head>
 <body>
     <div class="container">
@@ -152,7 +163,7 @@ $playsRemaining = getRemainingGamePlaysForGame($_SESSION['user_id'], $gameId, $m
                 <iframe src="<?php echo htmlspecialchars($game['file_path']); ?>" 
                         frameborder="0" 
                         width="100%" 
-                        height="600px"
+                    	height="1000"
                         id="gameFrame"></iframe>
             </div>
 

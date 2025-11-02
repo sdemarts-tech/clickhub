@@ -1,0 +1,506 @@
+/* ====================================
+   RESET & BASE STYLES
+   ==================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    color: white;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* ====================================
+   GAME CONTAINER
+   ==================================== */
+#game-container {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+}
+
+#canvas-container {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* ====================================
+   UI OVERLAY
+   ==================================== */
+.ui-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.ui-overlay > * {
+    pointer-events: auto;
+}
+
+/* ====================================
+   HEADER
+   ==================================== */
+.game-header {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+}
+
+.game-header h1 {
+    font-size: 2.5em;
+    text-shadow: 0 0 20px rgba(102, 126, 234, 0.8),
+                 0 0 40px rgba(102, 126, 234, 0.5);
+    margin-bottom: 5px;
+}
+
+.subtitle {
+    font-size: 0.9em;
+    opacity: 0.8;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* ====================================
+   BALANCE DISPLAY
+   ==================================== */
+.balance-display {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    padding: 15px 25px;
+    border-radius: 12px;
+    border: 2px solid rgba(255,255,255,0.2);
+    text-align: center;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+}
+
+.balance-label {
+    font-size: 0.8em;
+    opacity: 0.7;
+    margin-bottom: 5px;
+}
+
+.balance-amount {
+    font-size: 2em;
+    font-weight: bold;
+    color: #FFD700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.balance-unit {
+    font-size: 0.8em;
+    opacity: 0.7;
+}
+
+/* ====================================
+   PHASE INDICATOR
+   ==================================== */
+.phase-indicator {
+    position: absolute;
+    top: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(102, 126, 234, 0.3);
+    backdrop-filter: blur(5px);
+    padding: 10px 25px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    border: 2px solid rgba(102, 126, 234, 0.5);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+/* ====================================
+   RESULT DISPLAY
+   ==================================== */
+.result-display {
+    position: absolute;
+    top: 170px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    padding: 20px 40px;
+    border-radius: 15px;
+    border: 3px solid rgba(255,255,255,0.3);
+    text-align: center;
+    min-width: 350px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+}
+
+.result-label {
+    font-size: 1em;
+    opacity: 0.8;
+    margin-bottom: 10px;
+}
+
+.result-dice {
+    font-size: 2.5em;
+    letter-spacing: 10px;
+    margin: 10px 0;
+}
+
+.result-outcome {
+    font-size: 1.3em;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.result-outcome.win {
+    color: #00FF00;
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+}
+
+.result-outcome.loss {
+    color: #FF4444;
+    text-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+}
+
+/* ====================================
+   BETTING PANEL
+   ==================================== */
+.betting-panel {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    padding: 20px;
+    border-radius: 15px;
+    border: 2px solid rgba(255,255,255,0.2);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+}
+
+/* Bet Chips */
+.bet-chips {
+    margin-bottom: 20px;
+}
+
+.chip-label {
+    font-size: 0.9em;
+    margin-bottom: 10px;
+    opacity: 0.8;
+}
+
+.chips {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.chip {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #555 0%, #333 100%);
+    color: white;
+    border: 3px solid rgba(255,255,255,0.3);
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+.chip:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.7);
+}
+
+.chip.selected {
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    border-color: #FFD700;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+    transform: scale(1.1);
+}
+
+.chip:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Color Panels */
+.color-panels {
+    margin-bottom: 15px;
+}
+
+.color-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.color-row:last-child {
+    margin-bottom: 0;
+}
+
+.color-panel {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.1);
+    border: 3px solid rgba(255,255,255,0.3);
+    border-radius: 12px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    text-align: center;
+}
+
+.color-panel:hover {
+    transform: translateY(-3px);
+    border-color: rgba(255,255,255,0.5);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+}
+
+.color-panel.has-bet {
+    border-color: #FFD700;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+}
+
+.bet-badge {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    color: #000;
+    font-weight: bold;
+    font-size: 0.9em;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 2px solid white;
+    box-shadow: 0 4px 10px rgba(255, 215, 0, 0.5);
+    display: none;
+}
+
+.color-panel.has-bet .bet-badge {
+    display: block;
+}
+
+.color-face {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 10px;
+    border-radius: 8px;
+    border: 3px solid rgba(255,255,255,0.5);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+.color-name {
+    font-weight: bold;
+    font-size: 1.1em;
+    margin-bottom: 5px;
+}
+
+.payout {
+    font-size: 0.8em;
+    opacity: 0.7;
+}
+
+/* Bet Summary */
+.bet-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+}
+
+.total-bet {
+    font-size: 1.1em;
+    font-weight: bold;
+}
+
+.btn-clear {
+    padding: 8px 20px;
+    background: rgba(255, 68, 68, 0.3);
+    border: 2px solid #FF4444;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-clear:hover {
+    background: rgba(255, 68, 68, 0.5);
+    transform: translateY(-2px);
+}
+
+/* ====================================
+   CONTROL BUTTONS
+   ==================================== */
+.controls {
+    position: absolute;
+    bottom: 20px;
+    right: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.btn-primary, .btn-secondary {
+    padding: 15px 30px;
+    font-size: 1.1em;
+    font-weight: bold;
+    border: 3px solid rgba(255,255,255,0.3);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    min-width: 180px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.6);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-secondary {
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border-color: #FFD700;
+    box-shadow: 0 5px 20px rgba(255, 215, 0, 0.3);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 215, 0, 0.2);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(255, 215, 0, 0.5);
+}
+
+/* ====================================
+   LOADING SCREEN
+   ==================================== */
+#loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    transition: opacity 0.5s ease;
+}
+
+#loading-screen.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.loading-content {
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 60px;
+    height: 60px;
+    border: 5px solid rgba(255,255,255,0.3);
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ====================================
+   RESPONSIVE
+   ==================================== */
+@media (max-width: 768px) {
+    .game-header h1 {
+        font-size: 1.8em;
+    }
+    
+    .betting-panel {
+        width: 95%;
+        padding: 15px;
+    }
+    
+    .chip {
+        width: 50px;
+        height: 50px;
+        font-size: 0.9em;
+    }
+    
+    .color-row {
+        gap: 10px;
+    }
+    
+    .color-panel {
+        padding: 10px;
+    }
+    
+    .color-face {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .controls {
+        right: 10px;
+        bottom: 10px;
+    }
+    
+    .btn-primary, .btn-secondary {
+        padding: 12px 20px;
+        font-size: 1em;
+        min-width: 140px;
+    }
+}
+
+/* ====================================
+   ANIMATIONS
+   ==================================== */
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.winning-panel {
+    animation: pulse 0.5s ease-in-out 3;
+    border-color: #FFD700 !important;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.8) !important;
+}
+
+@keyframes glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.6); }
+    50% { box-shadow: 0 0 40px rgba(102, 126, 234, 1); }
+}

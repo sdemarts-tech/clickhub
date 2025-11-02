@@ -5,15 +5,43 @@ require_once 'includes/functions.php';
 
 requireLogin();
 
+// TEMPORARY DEBUG - Remove after fixing
+if (isset($_GET['debug'])) {
+    $allGames = $supabase->select(TABLE_GAMES, '*', ['status' => 'active']);
+    echo '<pre style="background: #f4f4f4; padding: 20px; margin: 20px;">';
+    echo '<strong>DEBUG: Raw games from database:</strong><br>';
+    echo 'Total count: ' . count($allGames) . '<br><br>';
+    foreach ($allGames as $idx => $g) {
+        echo "Game #{$idx}: ID={$g['id']} | Name={$g['name']}<br>";
+    }
+    echo '</pre>';
+}
+
 // Get remaining plays
 $remainingPlays = getRemainingGamePlays($_SESSION['user_id']);
 $todayPlays = getTodayGamePlaysCount($_SESSION['user_id']);
 
-// Get all active games
+// Get all active games using wrapper
 $games = $supabase->select(TABLE_GAMES, '*', ['status' => 'active']);
-if (isset($games['error'])) {
+
+// Ensure we have a valid array
+if (!is_array($games) || isset($games['error'])) {
     $games = [];
 }
+
+// Remove any potential duplicates by ID
+$uniqueGames = [];
+$seenIds = [];
+foreach ($games as $game) {
+    if (is_array($game) && isset($game['id'])) {
+        $gameId = $game['id'];
+        if (!in_array($gameId, $seenIds)) {
+            $uniqueGames[] = $game;
+            $seenIds[] = $gameId;
+        }
+    }
+}
+$games = $uniqueGames;
 
 // Get ALL game plays for today at once (optimization)
 $today = date('Y-m-d');
@@ -44,7 +72,8 @@ foreach ($todayPlaysData as $play) {
 }
 
 // Add status info for each game
-foreach ($games as &$game) {
+$processedGames = [];
+foreach ($games as $index => $game) {
     $gameId = $game['id'];
     $maxPlaysPerDay = intval($game['max_plays_per_day'] ?? 3);
     
@@ -69,15 +98,22 @@ foreach ($games as &$game) {
         $bestScore = getUserBestScore($_SESSION['user_id'], $gameId);
     }
     
-    // Set game data
-    $game['plays_today'] = $playsToday;
-    $game['max_plays_per_day'] = $maxPlaysPerDay;
-    $game['plays_remaining'] = max(0, $maxPlaysPerDay - $playsToday);
-    $game['reached_game_limit'] = ($playsToday >= $maxPlaysPerDay);
-    $game['cooldown_remaining'] = $cooldownRemaining;
-    $game['can_play'] = ($cooldownRemaining == 0 && !$game['reached_game_limit']);
-    $game['best_score'] = $bestScore;
+    // Create new game array with added data
+    $processedGame = $game;
+    $processedGame['plays_today'] = $playsToday;
+    $processedGame['max_plays_per_day'] = $maxPlaysPerDay;
+    $processedGame['plays_remaining'] = max(0, $maxPlaysPerDay - $playsToday);
+    $processedGame['reached_game_limit'] = ($playsToday >= $maxPlaysPerDay);
+    $processedGame['cooldown_remaining'] = $cooldownRemaining;
+    $processedGame['can_play'] = ($cooldownRemaining == 0 && !$processedGame['reached_game_limit']);
+    $processedGame['best_score'] = $bestScore;
+    
+    $processedGames[] = $processedGame;
 }
+
+// Replace games array with processed version
+$games = $processedGames;
+unset($processedGames); // Clean up
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -86,6 +122,22 @@ foreach ($games as &$game) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Games - <?php echo SITE_NAME; ?></title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .game-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 12px 12px 0 0;
+            margin: -20px -20px 20px -20px;
+        }
+        .game-card {
+            overflow: hidden;
+        }
+        .game-icon {
+            font-size: 4em;
+            margin-bottom: 10px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -135,7 +187,16 @@ foreach ($games as &$game) {
                 <div class="games-grid">
                     <?php foreach ($games as $game): ?>
                         <div class="game-card <?php echo !$game['can_play'] || $remainingPlays <= 0 ? 'game-locked' : ''; ?>">
-                            <div class="game-icon">🎮</div>
+                            <?php if (isset($game['featured_image']) && !empty($game['featured_image'])): ?>
+                                <img src="<?php echo htmlspecialchars($game['featured_image']); ?>" 
+                                     alt="<?php echo htmlspecialchars($game['name']); ?>" 
+                                     class="game-image"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <div class="game-icon" style="display:none;">🎮</div>
+                            <?php else: ?>
+                                <div class="game-icon">🎮</div>
+                            <?php endif; ?>
+                            
                             <h3><?php echo htmlspecialchars($game['name']); ?></h3>
                             <p class="game-description"><?php echo htmlspecialchars($game['description']); ?></p>
                             

@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Subway Runner Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Arial', sans-serif;
+            color: white;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        
+        h1 {
+            margin: 10px 0;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            font-size: 2.5em;
+            position: relative;
+            z-index: 100;
+        }
+
+        .info {
+            margin: 10px 0;
+            font-size: 1.3em;
+            display: flex;
+            gap: 30px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            position: relative;
+            z-index: 100;
+        }
+
+        .coin-icon {
+            color: #FFD700;
+        }
+        
+        .game-container {
+            position: relative;
+            width: 400px;
+            height: 600px;
+            background: linear-gradient(180deg, #87CEEB 0%, #E0F6FF 30%, #696969 100%);
+            border: 4px solid white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .road {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            background: #4a4a4a;
+            perspective: 500px;
+        }
+
+        .lane-marker {
+            position: absolute;
+            width: 4px;
+            height: 80px;
+            background: white;
+            left: 33.33%;
+        }
+
+        .lane-marker.right {
+            left: 66.66%;
+        }
+
+        .lane-markers-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .player {
+            position: absolute;
+            bottom: 50px;
+            width: 50px;
+            height: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: left 0.2s ease;
+            z-index: 50;
+        }
+
+        .player-body {
+            width: 100%;
+            height: 70%;
+            background: #FF6B6B;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .player-head {
+            width: 35px;
+            height: 35px;
+            background: #FFB6B6;
+            border-radius: 50%;
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .player-eyes {
+            position: absolute;
+            top: 12px;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            padding: 0 8px;
+        }
+
+        .eye {
+            width: 6px;
+            height: 6px;
+            background: black;
+            border-radius: 50%;
+        }
+
+        .player-legs {
+            position: absolute;
+            bottom: -15px;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            padding: 0 10px;
+        }
+
+        .leg {
+            width: 12px;
+            height: 15px;
+            background: #333;
+            border-radius: 0 0 5px 5px;
+        }
+
+        .obstacle {
+            position: absolute;
+            width: 60px;
+            height: 70px;
+            background: #8B4513;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .obstacle::before {
+            content: '⚠️';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+        }
+
+        .coin {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: radial-gradient(circle, #FFD700, #FFA500);
+            border-radius: 50%;
+            border: 3px solid #FFD700;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #8B4513;
+        }
+
+        .coin::before {
+            content: '$';
+            font-size: 1.2em;
+        }
+
+        .controls {
+            margin: 15px 0;
+            text-align: center;
+            position: relative;
+            z-index: 100;
+        }
+        
+        button {
+            padding: 12px 30px;
+            font-size: 1.1em;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 3px solid white;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 5px;
+            backdrop-filter: blur(10px);
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        button:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.95);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            display: none;
+            z-index: 200;
+            border: 4px solid white;
+        }
+
+        .game-over.show {
+            display: block;
+            animation: popup 0.3s ease;
+        }
+
+        @keyframes popup {
+            0% { transform: translate(-50%, -50%) scale(0.5); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .game-over h2 {
+            margin: 0 0 20px 0;
+            font-size: 2.5em;
+            color: #FFD700;
+        }
+
+        .game-over p {
+            font-size: 1.3em;
+            margin: 10px 0;
+        }
+
+        .instructions {
+            margin-top: 15px;
+            text-align: center;
+            color: rgba(255,255,255,0.95);
+            max-width: 400px;
+            font-size: 1.1em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            position: relative;
+            z-index: 100;
+        }
+
+        .instructions strong {
+            font-size: 1.2em;
+            color: #FFD700;
+        }
+
+        @media (max-width: 480px) {
+            .game-container {
+                width: 90vw;
+                height: 70vh;
+                max-width: 400px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .info {
+                font-size: 1em;
+                gap: 15px;
+            }
+
+            button {
+                padding: 10px 20px;
+                font-size: 1em;
+            }
+        }
+
+        .speed-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            z-index: 60;
+        }
+
+        .combo {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 215, 0, 0.9);
+            color: #000;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: none;
+            z-index: 70;
+            animation: bounce 0.5s;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.2); }
+        }
+
+        .combo.show {
+            display: block;
+        }
+      
+@media (max-width: 768px) {
+ .game-over.show {
+    padding: 20px 20px;
+    width: 90%;
+} 
+}
+      
+      
+    </style>
+</head>
+<body>
+    <h1>🏃 Subway Runner</h1>
+    <div class="info">
+        <span>Distance: <span id="distance">0</span>m</span>
+        <span class="coin-icon">💰 <span id="coins">0</span></span>
+        <span>Score: <span id="score">0</span></span>
+    </div>
+    <div class="game-container">
+        <div class="road">
+            <div class="lane-markers-container" id="laneMarkers"></div>
+        </div>
+        <div class="speed-indicator">Speed: <span id="speed">1.0</span>x</div>
+        <div class="combo" id="combo">Combo x<span id="comboCount">0</span>!</div>
+        <div class="player" id="player">
+            <div class="player-head">
+                <div class="player-eyes">
+                    <div class="eye"></div>
+                    <div class="eye"></div>
+                </div>
+            </div>
+            <div class="player-body">
+                <div class="player-legs">
+                    <div class="leg"></div>
+                    <div class="leg"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="controls">
+        <button onclick="startGame()">Start Game</button>
+    </div>
+    <div class="instructions">
+        <p><strong>Desktop:</strong> Arrow keys (← →) to dodge</p>
+        <p><strong>Mobile:</strong> Swipe left/right</p>
+        <p>Collect coins 💰 and avoid obstacles!</p>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>Game Over!</h2>
+        <p>Distance: <span id="finalDistance">0</span>m</p>
+        <p class="coin-icon">Coins: <span id="finalCoins">0</span></p>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <button onclick="startGame()">Play Again</button>
+    </div>
+
+    <script>
+        const gameContainer = document.querySelector('.game-container');
+        const player = document.getElementById('player');
+        const road = document.querySelector('.road');
+        
+        // Game state
+        let gameRunning = false;
+        let currentLane = 1; // 0 = left, 1 = center, 2 = right
+        let distance = 0;
+        let coins = 0;
+        let score = 0;
+        let speed = 5;
+        let obstacles = [];
+        let coinObjects = [];
+        let laneMarkers = [];
+        let gameLoop;
+        let spawnTimer = 0;
+        let markerTimer = 0;
+        let coinCombo = 0;
+        let comboTimer = 0;
+        
+        const lanes = [16.66, 50, 83.33]; // Percentage positions for 3 lanes
+        const obstacleSpawnRate = 100;
+        const coinSpawnRate = 60;
+        
+        // Touch controls
+        let touchStartX = 0;
+        
+        // Initialize lane markers
+        function initLaneMarkers() {
+            const container = document.getElementById('laneMarkers');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < 10; i++) {
+                const marker1 = document.createElement('div');
+                marker1.className = 'lane-marker';
+                marker1.style.top = (i * 100) + 'px';
+                container.appendChild(marker1);
+                
+                const marker2 = document.createElement('div');
+                marker2.className = 'lane-marker right';
+                marker2.style.top = (i * 100) + 'px';
+                container.appendChild(marker2);
+                
+                laneMarkers.push(marker1, marker2);
+            }
+        }
+        
+        function startGame() {
+            if (gameRunning) return;
+            
+            // Enable touch blocking during gameplay
+            gameContainer.style.touchAction = 'none';
+            
+            // Reset game state
+            currentLane = 1;
+            distance = 0;
+            coins = 0;
+            score = 0;
+            speed = 5;
+            obstacles = [];
+            coinObjects = [];
+            spawnTimer = 0;
+            markerTimer = 0;
+            coinCombo = 0;
+            comboTimer = 0;
+            
+            // Clear all obstacles and coins
+            document.querySelectorAll('.obstacle, .coin').forEach(el => el.remove());
+            
+            // Reset player position
+            updatePlayerPosition();
+            
+            // Update display
+            updateDisplay();
+            document.getElementById('gameOver').classList.remove('show');
+            
+            // Start game
+            gameRunning = true;
+            gameLoop = setInterval(update, 1000 / 60); // 60 FPS
+        }
+        
+        function update() {
+            if (!gameRunning) return;
+            
+            // Update distance and score
+            distance += speed / 60;
+            score = Math.floor(distance * 10) + (coins * 50);
+            
+            // Increase speed gradually
+            if (distance > 0 && Math.floor(distance) % 100 === 0 && distance % 1 < 0.1) {
+                speed += 0.1;
+            }
+            
+            // Update lane markers
+            markerTimer += speed;
+            laneMarkers.forEach(marker => {
+                let top = parseFloat(marker.style.top) + speed;
+                if (top > 700) {
+                    top = -80;
+                }
+                marker.style.top = top + 'px';
+            });
+            
+            // Spawn obstacles
+            spawnTimer++;
+            if (spawnTimer > obstacleSpawnRate) {
+                spawnObstacle();
+                spawnTimer = 0;
+            }
+            
+            // Spawn coins
+            if (Math.random() < 0.02 && spawnTimer > coinSpawnRate) {
+                spawnCoin();
+            }
+            
+            // Update obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.y += speed;
+                obs.element.style.top = obs.y + 'px';
+                
+                // Check collision with player
+                if (obs.y > 450 && obs.y < 550 && obs.lane === currentLane) {
+                    gameOver();
+                    return;
+                }
+                
+                // Remove off-screen obstacles
+                if (obs.y > 700) {
+                    obs.element.remove();
+                    obstacles.splice(i, 1);
+                }
+            }
+            
+            // Update coins
+            for (let i = coinObjects.length - 1; i >= 0; i--) {
+                const coin = coinObjects[i];
+                coin.y += speed;
+                coin.element.style.top = coin.y + 'px';
+                
+                // Check collection
+                if (coin.y > 450 && coin.y < 550 && coin.lane === currentLane) {
+                    collectCoin(coin, i);
+                }
+                
+                // Remove off-screen coins
+                if (coin.y > 700) {
+                    coin.element.remove();
+                    coinObjects.splice(i, 1);
+                    coinCombo = 0; // Reset combo if missed
+                }
+            }
+            
+            // Update combo timer
+            if (comboTimer > 0) {
+                comboTimer--;
+                if (comboTimer === 0) {
+                    document.getElementById('combo').classList.remove('show');
+                }
+            }
+            
+            updateDisplay();
+        }
+        
+        function spawnObstacle() {
+            // Don't spawn if too close to existing obstacle in same lane
+            const recentObstacles = obstacles.filter(o => o.y < 200);
+            const availableLanes = [0, 1, 2].filter(lane => 
+                !recentObstacles.some(o => o.lane === lane && o.y > -100)
+            );
+            
+            if (availableLanes.length === 0) return;
+            
+            const lane = availableLanes[Math.floor(Math.random() * availableLanes.length)];
+            const obstacle = document.createElement('div');
+            obstacle.className = 'obstacle';
+            obstacle.style.left = lanes[lane] + '%';
+            obstacle.style.transform = 'translateX(-50%)';
+            obstacle.style.top = '-70px';
+            
+            gameContainer.appendChild(obstacle);
+            
+            obstacles.push({
+                element: obstacle,
+                lane: lane,
+                y: -70
+            });
+        }
+        
+        function spawnCoin() {
+            const lane = Math.floor(Math.random() * 3);
+            
+            // Don't spawn if obstacle nearby
+            const hasObstacle = obstacles.some(o => 
+                o.lane === lane && o.y > -100 && o.y < 100
+            );
+            
+            if (hasObstacle) return;
+            
+            const coin = document.createElement('div');
+            coin.className = 'coin';
+            coin.style.left = lanes[lane] + '%';
+            coin.style.transform = 'translateX(-50%)';
+            coin.style.top = '-30px';
+            
+            gameContainer.appendChild(coin);
+            
+            coinObjects.push({
+                element: coin,
+                lane: lane,
+                y: -30
+            });
+        }
+        
+        function collectCoin(coin, index) {
+            coin.element.remove();
+            coinObjects.splice(index, 1);
+            coins++;
+            coinCombo++;
+            
+            // Show combo
+            if (coinCombo > 2) {
+                document.getElementById('comboCount').textContent = coinCombo;
+                document.getElementById('combo').classList.add('show');
+                comboTimer = 60; // Show for 1 second
+            }
+            
+            // Coin collection animation
+            coin.element.style.animation = 'bounce 0.3s';
+        }
+        
+        function moveLeft() {
+            if (currentLane > 0 && gameRunning) {
+                currentLane--;
+                updatePlayerPosition();
+            }
+        }
+        
+        function moveRight() {
+            if (currentLane < 2 && gameRunning) {
+                currentLane++;
+                updatePlayerPosition();
+            }
+        }
+        
+        function updatePlayerPosition() {
+            player.style.left = lanes[currentLane] + '%';
+        }
+        
+        function updateDisplay() {
+            document.getElementById('distance').textContent = Math.floor(distance);
+            document.getElementById('coins').textContent = coins;
+            document.getElementById('score').textContent = score;
+            document.getElementById('speed').textContent = (speed / 5).toFixed(1);
+        }
+        
+        function gameOver() {
+            gameRunning = false;
+            clearInterval(gameLoop);
+            
+            // Re-enable scrolling after game over
+            gameContainer.style.touchAction = 'auto';
+            
+            document.getElementById('finalDistance').textContent = Math.floor(distance);
+            document.getElementById('finalCoins').textContent = coins;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOver').classList.add('show');
+            
+            // Send score to parent window
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'gameComplete',
+                    score: score
+                }, '*');
+            }
+        }
+        
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+                startGame();
+                return;
+            }
+            
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                e.preventDefault();
+                moveLeft();
+            } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                e.preventDefault();
+                moveRight();
+            }
+        });
+        
+        // Touch controls
+        gameContainer.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            touchStartX = e.touches[0].clientX;
+        }, { passive: false });
+        
+        gameContainer.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+        
+        gameContainer.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (!gameRunning) {
+                startGame();
+                return;
+            }
+            
+            const touchEndX = e.changedTouches[0].clientX;
+            const deltaX = touchEndX - touchStartX;
+            
+            if (Math.abs(deltaX) > 30) {
+                if (deltaX > 0) {
+                    moveRight();
+                } else {
+                    moveLeft();
+                }
+            }
+        }, { passive: false });
+        
+        // Click to start
+        gameContainer.addEventListener('click', () => {
+            if (!gameRunning) {
+                startGame();
+            }
+        });
+        
+        // Initialize
+        initLaneMarkers();
+        updatePlayerPosition();
+        
+        // Ensure scrolling is enabled initially
+        gameContainer.style.touchAction = 'auto';
+    </script>
+</body>
+</html>

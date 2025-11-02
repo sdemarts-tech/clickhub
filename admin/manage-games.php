@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_game'])) {
     $name = sanitize($_POST['name']);
     $description = sanitize($_POST['description']);
     $file_path = sanitize($_POST['file_path']);
+    $featured_image = isset($_POST['featured_image']) ? sanitize($_POST['featured_image']) : '';
     $min_score_required = intval($_POST['min_score_required']);
     $play_cooldown_minutes = intval($_POST['play_cooldown_minutes']);
     $max_plays_per_day = intval($_POST['max_plays_per_day']);
@@ -30,6 +31,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_game'])) {
             'max_plays_per_day' => $max_plays_per_day,
             'status' => 'active'
         ];
+        
+        // Only add featured_image if it's not empty
+        if (!empty($featured_image)) {
+            $gameData['featured_image'] = $featured_image;
+        }
         
         $result = $supabase->insert(TABLE_GAMES, $gameData);
         
@@ -49,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_game'])) {
     $name = sanitize($_POST['name']);
     $description = sanitize($_POST['description']);
     $file_path = sanitize($_POST['file_path']);
+    $featured_image = isset($_POST['featured_image']) ? sanitize($_POST['featured_image']) : '';
     $min_score_required = intval($_POST['min_score_required']);
     $play_cooldown_minutes = intval($_POST['play_cooldown_minutes']);
     $max_plays_per_day = intval($_POST['max_plays_per_day']);
@@ -64,6 +71,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_game'])) {
             'play_cooldown_minutes' => $play_cooldown_minutes,
             'max_plays_per_day' => $max_plays_per_day
         ];
+        
+        // Only add featured_image if it's not empty
+        if (!empty($featured_image)) {
+            $gameData['featured_image'] = $featured_image;
+        }
         
         $result = $supabase->update(TABLE_GAMES, $gameData, ['id' => $gameId]);
         
@@ -104,11 +116,27 @@ if (isset($_GET['toggle']) && isset($_GET['id'])) {
     exit;
 }
 
-// Get all games
+// Get all games using wrapper
 $games = $supabase->select(TABLE_GAMES);
-if (isset($games['error'])) {
+
+// Ensure we have a valid array
+if (!is_array($games) || isset($games['error'])) {
     $games = [];
 }
+
+// Remove any potential duplicates by ID
+$uniqueGames = [];
+$seenIds = [];
+foreach ($games as $game) {
+    if (is_array($game) && isset($game['id'])) {
+        $gameId = $game['id'];
+        if (!in_array($gameId, $seenIds)) {
+            $uniqueGames[] = $game;
+            $seenIds[] = $gameId;
+        }
+    }
+}
+$games = $uniqueGames;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -117,6 +145,33 @@ if (isset($games['error'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Games - <?php echo SITE_NAME; ?></title>
     <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .image-preview {
+            margin-top: 10px;
+            max-width: 200px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 5px;
+            background: #f9f9f9;
+        }
+        .image-preview img {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+        .no-preview {
+            padding: 20px;
+            text-align: center;
+            color: #999;
+            font-style: italic;
+        }
+        .game-thumb {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -200,19 +255,38 @@ if (isset($games['error'])) {
                         <small>Example: games/snake.html or https://example.com/game.html</small>
                     </div>
                     
+                    <div class="form-group">
+                        <label for="featured_image">Featured Image URL (Optional)</label>
+                        <input type="text" id="featured_image" name="featured_image" 
+                               value="<?php echo $editGame && isset($editGame['featured_image']) ? htmlspecialchars($editGame['featured_image']) : ''; ?>"
+                               placeholder="https://example.com/images/game.jpg"
+                               oninput="updateImagePreview(this.value)">
+                        <small>Full URL or relative path to game image (leave blank to use emoji icon 🎮)</small>
+                        
+                        <div id="imagePreview" class="image-preview">
+                            <?php if ($editGame && isset($editGame['featured_image']) && !empty($editGame['featured_image'])): ?>
+                                <img src="<?php echo htmlspecialchars($editGame['featured_image']); ?>" 
+                                     alt="Preview" 
+                                     onerror="this.parentElement.innerHTML='<div class=\'no-preview\'>❌ Image not found</div>'">
+                            <?php else: ?>
+                                <div class="no-preview">No image - will show 🎮 emoji</div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    
                     <div class="info-box" style="margin-top:15px; background:#e7f3ff; padding:15px; border-radius:5px;">
                         <strong>ℹ️ Note:</strong> Players earn points equal to their game score. 
                         Make sure your game sends the score via postMessage when game ends.
                     </div>
                     
                     <button type="submit" name="<?php echo $editGame ? 'edit_game' : 'add_game'; ?>" class="btn btn-primary">
-                        <?php echo $editGame ? '💾 Update Game' : 'Add Game'; ?>
+                        <?php echo $editGame ? '💾 Update Game' : '➕ Add Game'; ?>
                     </button>
                 </form>
             </div>
 
             <div class="table-section">
-                <h2>Existing Games</h2>
+                <h2>Existing Games (<?php echo count($games); ?>)</h2>
                 <?php if (empty($games)): ?>
                     <p>No games added yet.</p>
                 <?php else: ?>
@@ -220,6 +294,7 @@ if (isset($games['error'])) {
                         <table class="data-table">
                             <thead>
                                 <tr>
+                                    <th>Image</th>
                                     <th>Name</th>
                                     <th>Min Score</th>
                                     <th>Cooldown</th>
@@ -232,8 +307,19 @@ if (isset($games['error'])) {
                                 <?php foreach ($games as $game): ?>
                                     <tr>
                                         <td>
+                                            <?php if (isset($game['featured_image']) && !empty($game['featured_image'])): ?>
+                                                <img src="<?php echo htmlspecialchars($game['featured_image']); ?>" 
+                                                     alt="<?php echo htmlspecialchars($game['name']); ?>"
+                                                     class="game-thumb"
+                                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                                                <span style="display:none; font-size:40px;">🎮</span>
+                                            <?php else: ?>
+                                                <span style="font-size:40px;">🎮</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
                                             <strong><?php echo htmlspecialchars($game['name']); ?></strong><br>
-                                            <small><?php echo htmlspecialchars(substr($game['description'], 0, 50)); ?>...</small>
+                                            <small><?php echo htmlspecialchars(substr($game['description'], 0, 50)); ?><?php echo strlen($game['description']) > 50 ? '...' : ''; ?></small>
                                         </td>
                                         <td><?php echo $game['min_score_required'] ?? 0; ?></td>
                                         <td><?php echo $game['play_cooldown_minutes'] ?? 60; ?> min</td>
@@ -251,18 +337,32 @@ if (isset($games['error'])) {
                                                 ✏️ Edit
                                             </a>
                                             <a href="?toggle=<?php echo $game['status']; ?>&id=<?php echo $game['id']; ?>" 
-                                               class="btn btn-small">
-                                                <?php echo $game['status'] === 'active' ? 'Deactivate' : 'Activate'; ?>
+                                               class="btn btn-small"
+                                               onclick="return confirm('Toggle game status?');">
+                                                <?php echo $game['status'] === 'active' ? '🔴 Deactivate' : '✅ Activate'; ?>
                                             </a>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
-                            </tbody>
+                                </tbody>
                         </table>
                     </div>
                 <?php endif; ?>
             </div>
         </main>
     </div>
+    
+    <script>
+        function updateImagePreview(url) {
+            const preview = document.getElementById('imagePreview');
+            url = url.trim();
+            
+            if (url === '') {
+                preview.innerHTML = '<div class="no-preview">No image - will show 🎮 emoji</div>';
+            } else {
+                preview.innerHTML = '<img src="' + url + '" alt="Preview" onerror="this.parentElement.innerHTML=\'<div class=\\\'no-preview\\\'>❌ Image not found or invalid URL</div>\'">';
+            }
+        }
+    </script>
 </body>
 </html>

@@ -124,32 +124,32 @@ if (empty($userName)) {
                 <div class="bet-chips">
                     <div class="chip-label">Select Bet Amount:</div>
                     <div class="chips">
-                        <button class="chip chip-5" data-amount="5">5</button>
-                        <button class="chip chip-10" data-amount="10">10</button>
-                        <button class="chip chip-50 selected" data-amount="50">50</button>
-                        <button class="chip chip-100" data-amount="100">100</button>
-                        <button class="chip chip-500" data-amount="500">500</button>
+                        <button class="chip" data-amount="5">5</button>
+                        <button class="chip" data-amount="10">10</button>
+                        <button class="chip selected" data-amount="50">50</button>
+                        <button class="chip" data-amount="100">100</button>
+                        <button class="chip" data-amount="500">500</button>
                     </div>
                 </div>
                 
                 <div class="color-panels">
                     <!-- Row 1 -->
                     <div class="color-row">
-                        <div class="color-panel panel-yellow" data-color="yellow">
+                        <div class="color-panel" data-color="yellow">
                             <div class="bet-badge" data-color="yellow">0</div>
                             <div class="color-face" style="background: #FFD700;"></div>
                             <div class="color-name">YELLOW</div>
                             <div class="payout">PAY 2×/3×/4×</div>
                         </div>
                         
-                        <div class="color-panel panel-white" data-color="white">
+                        <div class="color-panel" data-color="white">
                             <div class="bet-badge" data-color="white">0</div>
                             <div class="color-face" style="background: #FFFFFF;"></div>
                             <div class="color-name">WHITE</div>
                             <div class="payout">PAY 2×/3×/4×</div>
                         </div>
                         
-                        <div class="color-panel panel-pink" data-color="pink">
+                        <div class="color-panel" data-color="pink">
                             <div class="bet-badge" data-color="pink">0</div>
                             <div class="color-face" style="background: #FF1493;"></div>
                             <div class="color-name">PINK</div>
@@ -159,21 +159,21 @@ if (empty($userName)) {
                     
                     <!-- Row 2 -->
                     <div class="color-row">
-                        <div class="color-panel panel-blue" data-color="blue">
+                        <div class="color-panel" data-color="blue">
                             <div class="bet-badge" data-color="blue">0</div>
                             <div class="color-face" style="background: #0080FF;"></div>
                             <div class="color-name">BLUE</div>
                             <div class="payout">PAY 2×/3×/4×</div>
                         </div>
                         
-                        <div class="color-panel panel-red" data-color="red">
+                        <div class="color-panel" data-color="red">
                             <div class="bet-badge" data-color="red">0</div>
                             <div class="color-face" style="background: #FF0000;"></div>
                             <div class="color-name">RED</div>
                             <div class="payout">PAY 2×/3×/3×/4×</div>
                         </div>
                         
-                        <div class="color-panel panel-green" data-color="green">
+                        <div class="color-panel" data-color="green">
                             <div class="bet-badge" data-color="green">0</div>
                             <div class="color-face" style="background: #00FF00;"></div>
                             <div class="color-name">GREEN</div>

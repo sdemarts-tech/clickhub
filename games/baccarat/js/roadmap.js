@@ -1,5 +1,6 @@
 const MAX_ENTRIES = 240;
-const MAX_ROWS = 6;
+export const MAX_ROWS = 6;
+const MAX_COLUMNS = 80;
 
 const WINNER_SYMBOL = {
     banker: 'B',
@@ -10,8 +11,8 @@ const WINNER_SYMBOL = {
 export function createRoadmapState() {
     return {
         bead: [],
-        big: [],
         bigColumns: [],
+        big: [],
         bigEye: [],
         small: [],
         roach: [],
@@ -24,57 +25,21 @@ export function createRoadmapState() {
     };
 }
 
-function flattenBigColumns(columns) {
-    const flat = [];
-    columns.forEach((col, colIdx) => {
-        col.forEach((node, rowIdx) => {
-            flat.push({ ...node, column: colIdx, row: rowIdx });
-        });
-    });
-    if (flat.length > MAX_ENTRIES) {
-        return flat.slice(flat.length - MAX_ENTRIES);
+function pushWithLimit(arr, value) {
+    if (value === null || value === undefined) return;
+    arr.push(value);
+    if (arr.length > MAX_ENTRIES) {
+        arr.splice(0, arr.length - MAX_ENTRIES);
     }
-    return flat;
 }
 
-function addBigRoadEntry(state, symbol) {
-    const columns = state.bigColumns;
+function columnHasRow(column, row) {
+    return column.some(node => node.row === row);
+}
 
-    if (!state.lastSymbol) {
-        columns.push([{ symbol, ties: 0 }]);
-        state.lastSymbol = symbol;
-        return { column: 0, row: 0 };
-    }
-    
-    // prune old columns if necessary
-    if (columns.length > 40) {
-        columns.shift();
-    }
-
-    if (symbol === state.lastSymbol) {
-        const currentColumn = columns[columns.length - 1];
-        let rowIdx = currentColumn.length;
-        const prevColumn = columns.length > 1 ? columns[columns.length - 2] : null;
-
-        let startNewColumn = false;
-        if (rowIdx >= MAX_ROWS - 1) {
-            startNewColumn = true;
-        } else if (prevColumn && prevColumn.length <= rowIdx) {
-            startNewColumn = true;
-        }
-
-        if (!startNewColumn) {
-            currentColumn.push({ symbol, ties: 0 });
-            return { column: columns.length - 1, row: rowIdx };
-        }
-
-        columns.push([{ symbol, ties: 0 }]);
-        return { column: columns.length - 1, row: 0 };
-    }
-
-    columns.push([{ symbol, ties: 0 }]);
-    state.lastSymbol = symbol;
-    return { column: columns.length - 1, row: 0 };
+function pushNode(column, node) {
+    column.push(node);
+    column.sort((a, b) => a.row - b.row);
 }
 
 function addTieToLast(columns) {
@@ -84,11 +49,56 @@ function addTieToLast(columns) {
     lastColumn[lastColumn.length - 1].ties = (lastColumn[lastColumn.length - 1].ties || 0) + 1;
 }
 
+function flattenBigColumns(columns) {
+    const flat = [];
+    columns.forEach((col, columnIdx) => {
+        col.forEach(node => {
+            flat.push({ ...node, column: columnIdx });
+        });
+    });
+    return flat.slice(-MAX_ENTRIES);
+}
+
+function addBigRoadEntry(state, symbol) {
+    const columns = state.bigColumns;
+
+    if (!state.lastSymbol) {
+        columns.push([{ symbol, row: 0, ties: 0 }]);
+        state.lastSymbol = symbol;
+        return { column: 0, row: 0 };
+    }
+
+    if (columns.length > MAX_COLUMNS) {
+        columns.splice(0, columns.length - MAX_COLUMNS);
+    }
+
+    if (symbol !== state.lastSymbol) {
+        const newColumn = [{ symbol, row: 0, ties: 0 }];
+        columns.push(newColumn);
+        state.lastSymbol = symbol;
+        return { column: columns.length - 1, row: 0 };
+    }
+
+    const currentColumn = columns[columns.length - 1];
+    const lastNode = currentColumn[currentColumn.length - 1];
+    const nextRow = lastNode.row + 1;
+
+    if (nextRow < MAX_ROWS && !columnHasRow(currentColumn, nextRow)) {
+        pushNode(currentColumn, { symbol, row: nextRow, ties: 0 });
+        return { column: columns.length - 1, row: nextRow };
+    }
+
+    const newColumn = [];
+    const row = Math.min(lastNode.row, MAX_ROWS - 1);
+    pushNode(newColumn, { symbol, row, ties: 0 });
+    columns.push(newColumn);
+    return { column: columns.length - 1, row };
+}
+
 function computeDerivedColor(columns, columnIndex, rowIndex, gap) {
     if (columnIndex < gap) return null;
     const leftColumn = columns[columnIndex - 1];
     const compareColumn = columns[columnIndex - gap];
-
     if (!leftColumn || !compareColumn) return null;
 
     if (rowIndex === 0) {
@@ -97,14 +107,8 @@ function computeDerivedColor(columns, columnIndex, rowIndex, gap) {
         return leftLength === compareLength ? 'R' : 'B';
     }
 
-    const hasCell = compareColumn.length > rowIndex ? compareColumn[rowIndex] : null;
+    const hasCell = compareColumn.some(node => node.row === rowIndex);
     return hasCell ? 'R' : 'B';
-}
-
-function pushWithLimit(arr, value) {
-    if (!value) return;
-    arr.push(value);
-    if (arr.length > MAX_ENTRIES) arr.shift();
 }
 
 export function updateRoadmaps(state, result) {

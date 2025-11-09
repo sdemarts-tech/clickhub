@@ -1,7 +1,7 @@
 import { CONFIG } from './config.js';
 import { GameState } from './state.js';
 import { dealRound, calculatePayouts } from './baccarat.js';
-import { createRoadmapState, updateRoadmaps } from './roadmap.js';
+import { createRoadmapState, updateRoadmaps, MAX_ROWS } from './roadmap.js';
 import { toast } from './utils.js';
 import { toggleMusic, toggleSFX, playSFX } from './audio.js';
 import { initRenderer, updateBalance, updateBets, updateTimer, updateRound, renderCards, showResult, hideResult, pushHistoryItem } from './renderer.js';

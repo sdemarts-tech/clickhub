@@ -40,8 +40,8 @@ if (empty($userId)) {
     $userId = 'guest';
 }
 
-if ($userPoints < 0) {
-    $userPoints = 0;
+if ($userPoints <= 0) {
+    $userPoints = 500;
 }
 ?>
 <!DOCTYPE html>

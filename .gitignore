@@ -11,3 +11,5 @@ Then type these lines:
 ```
 config.php
 supabase.php
+/manual
+/supabase

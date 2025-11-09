@@ -75,21 +75,35 @@ foreach ($todayPlaysData as $play) {
 $processedGames = [];
 foreach ($games as $index => $game) {
     $gameId = $game['id'];
-    $maxPlaysPerDay = intval($game['max_plays_per_day'] ?? 3);
+    $gameCategory = $game['game_category'] ?? 'regular';
+    $isUnlimited = ($gameCategory === 'unlimited');
     
     // Get plays count for this game
     $gamePlays = $playsPerGame[$gameId] ?? [];
     $playsToday = count($gamePlays);
     
-    // Calculate cooldown from last play
-    $cooldownRemaining = 0;
-    if (!empty($gamePlays)) {
-        $lastPlayTime = strtotime($gamePlays[0]['played_at']);
-        $cooldownMinutes = intval($game['play_cooldown_minutes'] ?? 60);
-        $cooldownSeconds = $cooldownMinutes * 60;
-        $nextAvailableTime = $lastPlayTime + $cooldownSeconds;
-        $remainingSeconds = $nextAvailableTime - time();
-        $cooldownRemaining = max(0, ceil($remainingSeconds / 60));
+    // For unlimited games, skip limit/cooldown checks
+    if ($isUnlimited) {
+        $maxPlaysPerDay = 999999; // Unlimited
+        $cooldownRemaining = 0;
+        $reachedGameLimit = false;
+        $canPlay = true; // Always available
+    } else {
+        $maxPlaysPerDay = intval($game['max_plays_per_day'] ?? 3);
+        
+        // Calculate cooldown from last play
+        $cooldownRemaining = 0;
+        if (!empty($gamePlays)) {
+            $lastPlayTime = strtotime($gamePlays[0]['played_at']);
+            $cooldownMinutes = intval($game['play_cooldown_minutes'] ?? 60);
+            $cooldownSeconds = $cooldownMinutes * 60;
+            $nextAvailableTime = $lastPlayTime + $cooldownSeconds;
+            $remainingSeconds = $nextAvailableTime - time();
+            $cooldownRemaining = max(0, ceil($remainingSeconds / 60));
+        }
+        
+        $reachedGameLimit = ($playsToday >= $maxPlaysPerDay);
+        $canPlay = ($cooldownRemaining == 0 && !$reachedGameLimit);
     }
     
     // Get best score (only call if needed)
@@ -102,11 +116,12 @@ foreach ($games as $index => $game) {
     $processedGame = $game;
     $processedGame['plays_today'] = $playsToday;
     $processedGame['max_plays_per_day'] = $maxPlaysPerDay;
-    $processedGame['plays_remaining'] = max(0, $maxPlaysPerDay - $playsToday);
-    $processedGame['reached_game_limit'] = ($playsToday >= $maxPlaysPerDay);
+    $processedGame['plays_remaining'] = $isUnlimited ? 999999 : max(0, $maxPlaysPerDay - $playsToday);
+    $processedGame['reached_game_limit'] = $reachedGameLimit;
     $processedGame['cooldown_remaining'] = $cooldownRemaining;
-    $processedGame['can_play'] = ($cooldownRemaining == 0 && !$processedGame['reached_game_limit']);
+    $processedGame['can_play'] = $canPlay;
     $processedGame['best_score'] = $bestScore;
+    $processedGame['is_unlimited'] = $isUnlimited;
     
     $processedGames[] = $processedGame;
 }
@@ -121,23 +136,8 @@ unset($processedGames); // Clean up
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Games - <?php echo SITE_NAME; ?></title>
-    <link rel="stylesheet" href="css/style.css">
-    <style>
-        .game-image {
-            width: 100%;
-            height: 180px;
-            object-fit: cover;
-            border-radius: 12px 12px 0 0;
-            margin: -20px -20px 20px -20px;
-        }
-        .game-card {
-            overflow: hidden;
-        }
-        .game-icon {
-            font-size: 4em;
-            margin-bottom: 10px;
-        }
-    </style>
+     <?php include 'includes/header-links.php'; ?>
+
 </head>
 <body>
     <div class="container">
@@ -187,6 +187,7 @@ unset($processedGames); // Clean up
                 <div class="games-grid">
                     <?php foreach ($games as $game): ?>
                         <div class="game-card <?php echo !$game['can_play'] || $remainingPlays <= 0 ? 'game-locked' : ''; ?>">
+                          <a href="play-game.php?id=<?php echo $game['id']; ?>">
                             <?php if (isset($game['featured_image']) && !empty($game['featured_image'])): ?>
                                 <img src="<?php echo htmlspecialchars($game['featured_image']); ?>" 
                                      alt="<?php echo htmlspecialchars($game['name']); ?>" 
@@ -205,24 +206,40 @@ unset($processedGames); // Clean up
                                     <span>🏆 Your Best:</span>
                                     <strong><?php echo number_format($game['best_score']); ?></strong>
                                 </div>
+                                <?php if (!$game['is_unlimited']): ?>
                                 <div class="game-stat">
                                     <span>🎯 Min Score:</span>
                                     <strong><?php echo $game['min_score_required']; ?></strong>
                                 </div>
+                                <?php endif; ?>
                                 <div class="game-stat">
                                     <span>🎮 Plays Today:</span>
-                                    <strong><?php echo $game['plays_today']; ?>/<?php echo $game['max_plays_per_day']; ?></strong>
+                                    <strong><?php echo $game['is_unlimited'] ? '∞' : $game['plays_today'] . '/' . $game['max_plays_per_day']; ?></strong>
                                 </div>
+                                <?php if (!$game['is_unlimited']): ?>
                                 <div class="game-stat">
                                     <span>⏱️ Cooldown:</span>
                                     <strong><?php echo $game['play_cooldown_minutes']; ?> min</strong>
                                 </div>
+                                <?php endif; ?>
+                                <?php if ($game['is_unlimited']): ?>
+                                <div class="game-stat">
+                                    <span>🎮 Type:</span>
+                                    <strong style="color: #28a745;">Unlimited</strong>
+                                </div>
+                                <?php endif; ?>
+                              </a>
                             </div>
                             
                             <div class="game-footer">
                                 <span class="game-points">💰 Score = Points</span>
                                 
-                                <?php if ($remainingPlays <= 0): ?>
+                                <?php if ($game['is_unlimited']): ?>
+                                    <!-- Unlimited games can always be played -->
+                                    <a href="play-game.php?id=<?php echo $game['id']; ?>">
+                                        Play Now (∞)
+                                    </a>
+                                <?php elseif ($remainingPlays <= 0): ?>
                                     <button class="btn btn-disabled" disabled>
                                         ❌ Daily Limit Reached (All Games)
                                     </button>
@@ -235,8 +252,8 @@ unset($processedGames); // Clean up
                                         🔒 Available in <?php echo formatTimeRemaining($game['cooldown_remaining']); ?>
                                     </button>
                                 <?php else: ?>
-                                    <a href="play-game.php?id=<?php echo $game['id']; ?>" class="btn btn-primary">
-                                        ✅ Play Now (<?php echo $game['plays_remaining']; ?> left)
+                                    <a href="play-game.php?id=<?php echo $game['id']; ?>">
+                                        Play Now (<?php echo $game['plays_remaining']; ?> left)
                                     </a>
                                 <?php endif; ?>
                             </div>

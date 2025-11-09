@@ -1,14 +1,33 @@
 /* ====================================
    RESET & BASE STYLES
    ==================================== */
-* {
+   * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-body {
-    font-family: 'Arial', sans-serif;
+@font-face {
+    font-family: 'Jungle Adventurer';
+    src: url('JungleAdventurerRegular.woff2') format('woff2'),
+        url('JungleAdventurerRegular.woff') format('woff'),
+        url('JungleAdventurerRegular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 
+    overflow: hidden;
+    position: fixed;
+    -webkit-overflow-scrolling: touch;
+}
+
+body, button {
+    font-family: 'Jungle Adventurer', sans-serif;
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
     color: white;
     overflow: hidden;
@@ -20,23 +39,33 @@ body {
    GAME CONTAINER
    ==================================== */
 #game-container {
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
     position: relative;
+    overflow: hidden;
+    max-width: 612px;
+    margin: 0 auto;
 }
 
 #canvas-container {
-    width: 100%;
-    height: 100%;
-    position: absolute;
+    width: 100vw;
+    height: calc(var(--vh, 1vh) * 100); /* Use dynamic viewport height */
+    height: 100svh; /* Use small viewport height */
+    height: 100dvh; /* Dynamic viewport height fallback */
+    height: 100vh; /* Standard fallback */
+    position: fixed;
     top: 0;
     left: 0;
+    overflow: hidden;
+    z-index: 1;
 }
 
 canvas {
     display: block;
-    width: 100%;
-    height: 100%;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100vw;
+    max-height: 100vh;
 }
 
 /* ====================================
@@ -50,6 +79,7 @@ canvas {
     height: 100%;
     pointer-events: none;
     z-index: 10;
+    overflow: hidden;
 }
 
 .ui-overlay > * {
@@ -139,20 +169,24 @@ canvas {
     top: 170px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.7);
+    background: rgb(255 243 177);
     backdrop-filter: blur(10px);
-    padding: 20px 40px;
-    border-radius: 15px;
-    border: 3px solid rgba(255,255,255,0.3);
+    padding: 10px 10px;
+    border-radius: 4px;
+    border: 4px solid rgb(255 225 55);
     text-align: center;
-    min-width: 350px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+    min-width: 260px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
 }
 
 .result-label {
-    font-size: 1em;
+    font-size: 16px;
     opacity: 0.8;
-    margin-bottom: 10px;
+    margin-bottom: 1px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: rgb(79 67 0);
+    letter-spacing: 0.03em;
 }
 
 .result-dice {
@@ -162,13 +196,13 @@ canvas {
 }
 
 .result-outcome {
-    font-size: 1.3em;
+    font-size: 1.9em;
     font-weight: bold;
     margin-top: 10px;
 }
 
 .result-outcome.win {
-    color: #00FF00;
+    color: #008400;
     text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
 }
 
@@ -182,15 +216,16 @@ canvas {
    ==================================== */
 .betting-panel {
     position: absolute;
-    bottom: 20px;
+    bottom: 0px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.7);
+    background: transparent;
     backdrop-filter: blur(10px);
-    padding: 20px;
+    padding: 20px 0 10px;
     border-radius: 15px;
-    border: 2px solid rgba(255,255,255,0.2);
-    box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+    border: 0;
+    width: 95%;
+    max-width: 540px;
 }
 
 /* Bet Chips */
@@ -201,27 +236,32 @@ canvas {
 .chip-label {
     font-size: 0.9em;
     margin-bottom: 10px;
-    opacity: 0.8;
+    color: #fff;
 }
 
 .chips {
     display: flex;
     gap: 10px;
-    justify-content: center;
+    justify-content: left;
 }
 
 .chip {
     width: 60px;
+    opacity: 0.8;
     height: 60px;
-    border-radius: 50%;
+    border-radius: 190px;
     background: linear-gradient(135deg, #555 0%, #333 100%);
     color: white;
-    border: 3px solid rgba(255,255,255,0.3);
+    border: 2px solid rgba(255,255,255,0.3);
     font-size: 1.1em;
     font-weight: bold;
     cursor: pointer;
+    text-shadow: -1px -1px 0 #a55000, -1px 1px 0 #a55000, 1px -1px 0 #a55000, 1px 1px 0 #a55000;
     transition: all 0.3s ease;
     box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    background: url(img/coin.png) center center no-repeat;
+    background-size: 100% auto;
+    background-color: #000;
 }
 
 .chip:hover {
@@ -231,9 +271,15 @@ canvas {
 
 .chip.selected {
     background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-    border-color: #FFD700;
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+    border-color: #ffcb00;
+    box-shadow: 0 0 8px rgb(53 45 0);
     transform: scale(1.1);
+    background: url(img/coin.png) center center;
+    background-size: 100% auto;
+    opacity: 1;
+    width: 65px;
+    height: 65px;
+    border-width: 3px;
 }
 
 .chip:disabled {
@@ -244,13 +290,13 @@ canvas {
 
 /* Color Panels */
 .color-panels {
-    margin-bottom: 15px;
+    margin-bottom: 5px;
 }
 
 .color-row {
     display: flex;
-    gap: 15px;
-    margin-bottom: 15px;
+    gap: 6px;
+    margin-bottom: 0;
 }
 
 .color-row:last-child {
@@ -260,13 +306,14 @@ canvas {
 .color-panel {
     flex: 1;
     background: rgba(255, 255, 255, 0.1);
-    border: 3px solid rgba(255,255,255,0.3);
+    border: 0;
     border-radius: 12px;
-    padding: 15px;
+    padding: 0;
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
     text-align: center;
+    margin: 0 0 5px;
 }
 
 .color-panel:hover {
@@ -282,17 +329,27 @@ canvas {
 
 .bet-badge {
     position: absolute;
-    top: -10px;
-    right: -10px;
+    top: 0px;
+    right: calc(50% - 25px);
+    width: 60px;
+    height: 60px;
+    border-radius: 100%;
     background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-    color: #000;
+    color: #ffffff;
     font-weight: bold;
-    font-size: 0.9em;
-    padding: 5px 12px;
-    border-radius: 20px;
+    font-size: 23px;
+    font-family: Arial, sans-serif;
+    padding: 19px 0 0;
+    border-radius: 170px;
     border: 2px solid white;
-    box-shadow: 0 4px 10px rgba(255, 215, 0, 0.5);
+    box-shadow: 0 4px 10px rgb(69 59 0 / 50%);
     display: none;
+    background: url(img/coin.png) center center;
+    background-size: 100% auto;
+    border: 0;
+    text-align: center;
+    letter-spacing: -0.03em;
+    text-shadow: -1px -1px 0 #a55000, -1px 1px 0 #a55000, 1px -1px 0 #a55000, 1px 1px 0 #a55000;
 }
 
 .color-panel.has-bet .bet-badge {
@@ -300,10 +357,10 @@ canvas {
 }
 
 .color-face {
-    width: 60px;
-    height: 60px;
-    margin: 0 auto 10px;
-    border-radius: 8px;
+    width: 100%;
+    min-height: 80px;
+    margin: 0 auto;
+    border-radius: 4px;
     border: 3px solid rgba(255,255,255,0.5);
     box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 }
@@ -312,11 +369,13 @@ canvas {
     font-weight: bold;
     font-size: 1.1em;
     margin-bottom: 5px;
+    display: none;
 }
 
 .payout {
     font-size: 0.8em;
     opacity: 0.7;
+    display: none;
 }
 
 /* Bet Summary */
@@ -324,23 +383,32 @@ canvas {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: 15px;
+    padding-top: 0;
     border-top: 1px solid rgba(255,255,255,0.2);
 }
 
 .total-bet {
     font-size: 1.1em;
     font-weight: bold;
+    text-shadow: 1px 1px 0px #000;
 }
 
 .btn-clear {
-    padding: 8px 20px;
-    background: rgba(255, 68, 68, 0.3);
-    border: 2px solid #FF4444;
     color: white;
-    border-radius: 8px;
+    padding: 5px 13px;
+    font-size: 0.8em;
+    font-weight: bold;
+    border: 1px solid #ff3e43;
+    border-radius: 6px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.3s 
+ease;
+    letter-spacing: 0.08em;
+    display: block;
+    text-shadow: 1px 1px 0 #000;
+    position: relative;
+    background: #B20F13;
+    background: linear-gradient(0deg, rgba(178, 15, 19, 1) 0%, rgba(222, 65, 47, 1) 100%);
 }
 
 .btn-clear:hover {
@@ -353,7 +421,7 @@ canvas {
    ==================================== */
 .controls {
     position: absolute;
-    bottom: 20px;
+    bottom: 240px;
     right: 30px;
     display: flex;
     flex-direction: column;
@@ -361,21 +429,24 @@ canvas {
 }
 
 .btn-primary, .btn-secondary {
-    padding: 15px 30px;
-    font-size: 1.1em;
+    padding: 14px 0;
+    font-size: 1.4em;
     font-weight: bold;
-    border: 3px solid rgba(255,255,255,0.3);
+    border: 2px solid #ade360;
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.3s ease;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
     min-width: 180px;
+    display: block;
+    text-shadow: -1px -1px 0 #000,-1px 1px 0 #000, 1px -1px 0 #000,  1px 1px 0 #000;
+    box-shadow: 0 0 0 2px #1f6b08, 0 0 0 5px #d6b499, 0 0 9px 5px #00000070;
+    position: relative;
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    background: #579C13;
+    background: linear-gradient(0deg,rgba(87, 156, 19, 1) 0%, rgba(158, 218, 34, 1) 100%);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -394,6 +465,10 @@ canvas {
     color: white;
     border-color: #FFD700;
     box-shadow: 0 5px 20px rgba(255, 215, 0, 0.3);
+}
+
+#btn-cashout {
+display: none;
 }
 
 .btn-secondary:hover {
@@ -451,8 +526,17 @@ canvas {
     }
     
     .betting-panel {
-        width: 95%;
-        padding: 15px;
+        width: 95vw !important;
+        max-width: 95vw !important;
+        padding: 10px;
+        bottom: 10px;
+    }
+    
+    .balance-display {
+        top: 10px;
+        right: 10px;
+        padding: 10px 15px;
+        font-size: 0.9em;
     }
     
     .chip {
@@ -462,26 +546,23 @@ canvas {
     }
     
     .color-row {
-        gap: 10px;
     }
     
     .color-panel {
-        padding: 10px;
+        min-width: 0;
     }
     
     .color-face {
-        width: 50px;
-        height: 50px;
     }
     
     .controls {
-        right: 10px;
-        bottom: 10px;
+        right: 30px;
+        bottom: 190px;
     }
     
     .btn-primary, .btn-secondary {
-        padding: 12px 20px;
-        font-size: 1em;
+        padding: 10px 20px;
+        font-size: 0.9em;
         min-width: 140px;
     }
 }

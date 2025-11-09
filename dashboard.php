@@ -27,7 +27,7 @@ $gamesRemaining = getRemainingGamePlays($_SESSION['user_id']);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - <?php echo SITE_NAME; ?></title>
-    <link rel="stylesheet" href="css/style.css">
+     <?php include 'includes/header-links.php'; ?>
 </head>
 <body>
     <div class="container">

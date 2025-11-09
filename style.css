@@ -1,0 +1,420 @@
+/* ====================================
+   RESET & BASE STYLES
+   ==================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: #1a1d2e;
+    color: #ffffff;
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+/* ====================================
+   HERO CONTAINER
+   ==================================== */
+.hero-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 60px 80px;
+    gap: 60px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* ====================================
+   LEFT CONTENT SIDE
+   ==================================== */
+.hero-content {
+    flex: 1;
+    max-width: 600px;
+}
+
+.hero-headline {
+    font-size: 72px;
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 24px;
+    color: #ffffff;
+    letter-spacing: -1px;
+}
+
+.hero-subheading {
+    font-size: 20px;
+    line-height: 1.6;
+    color: #b8bcc8;
+    margin-bottom: 40px;
+    max-width: 520px;
+}
+
+/* ====================================
+   CTA BUTTON
+   ==================================== */
+.cta-button {
+    display: inline-block;
+    padding: 18px 40px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffffff;
+    background: linear-gradient(135deg, #5B8DEF 0%, #B24BF3 100%);
+    border-radius: 50px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 30px rgba(91, 141, 239, 0.4);
+    margin-bottom: 60px;
+}
+
+.cta-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 40px rgba(91, 141, 239, 0.6);
+}
+
+.cta-button:active {
+    transform: translateY(0);
+}
+
+/* ====================================
+   FEATURES LIST
+   ==================================== */
+.features-list {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.feature-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.game-icon {
+    background: linear-gradient(135deg, #4C7FED 0%, #5B8DEF 100%);
+    color: #ffffff;
+}
+
+.cash-icon {
+    background: linear-gradient(135deg, #7B5FED 0%, #9F6BF3 100%);
+    color: #ffffff;
+}
+
+.friends-icon {
+    background: linear-gradient(135deg, #5B8DEF 0%, #7B5FED 100%);
+    color: #ffffff;
+}
+
+.device-icon {
+    background: linear-gradient(135deg, #4C6FED 0%, #6B7FED 100%);
+    color: #ffffff;
+}
+
+.feature-text {
+    font-size: 18px;
+    color: #ffffff;
+    line-height: 1.4;
+}
+
+.feature-text strong {
+    font-weight: 600;
+}
+
+/* ====================================
+   RIGHT MOCKUP SIDE
+   ==================================== */
+.hero-mockup {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    max-width: 550px;
+}
+
+.mockup-card {
+    width: 100%;
+    max-width: 420px;
+    background: linear-gradient(180deg, #2a3d7a 0%, #4a2d7c 100%);
+    border-radius: 40px;
+    padding: 40px 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+    position: relative;
+}
+
+/* UI Cards inside mockup */
+.ui-card {
+    background: #1e2139;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    gap: 16px;
+    transition: transform 0.3s ease;
+}
+
+.ui-card:hover {
+    transform: translateY(-2px);
+}
+
+.small-card {
+    height: 80px;
+}
+
+.large-card {
+    height: 200px;
+    background: linear-gradient(135deg, #5B8DEF 0%, #B24BF3 100%);
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Decorative circles in large card */
+.large-card::before {
+    content: '';
+    position: absolute;
+    width: 150px;
+    height: 150px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    top: -30px;
+    right: -30px;
+}
+
+.large-card::after {
+    content: '';
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    bottom: -20px;
+    left: -20px;
+}
+
+/* Card Icons */
+.card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #ffffff;
+    flex-shrink: 0;
+}
+
+.play-icon {
+    background: linear-gradient(135deg, #5B8DEF 0%, #7B6FED 100%);
+}
+
+.check-icon {
+    background: linear-gradient(135deg, #5B8DEF 0%, #7B6FED 100%);
+}
+
+.minus-icon {
+    background: linear-gradient(135deg, #4C7FED 0%, #5B8DEF 100%);
+}
+
+.large-card-icon {
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    color: #ffffff;
+    z-index: 1;
+}
+
+/* Card bars (placeholder text lines) */
+.card-bar {
+    height: 8px;
+    background: rgba(91, 141, 239, 0.3);
+    border-radius: 4px;
+    flex: 1;
+}
+
+.card-bar.short {
+    flex: 0.6;
+}
+
+/* ====================================
+   RESPONSIVE DESIGN
+   ==================================== */
+
+/* Tablet */
+@media (max-width: 1024px) {
+    .hero-container {
+        padding: 40px 40px;
+        gap: 40px;
+    }
+    
+    .hero-headline {
+        font-size: 56px;
+    }
+    
+    .hero-subheading {
+        font-size: 18px;
+    }
+    
+    .cta-button {
+        font-size: 18px;
+        padding: 16px 36px;
+    }
+    
+    .feature-text {
+        font-size: 16px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .hero-container {
+        flex-direction: column;
+        padding: 40px 20px;
+        gap: 60px;
+        text-align: center;
+    }
+    
+    .hero-content {
+        max-width: 100%;
+    }
+    
+    .hero-headline {
+        font-size: 48px;
+    }
+    
+    .hero-subheading {
+        font-size: 16px;
+        max-width: 100%;
+    }
+    
+    .cta-button {
+        font-size: 16px;
+        padding: 14px 32px;
+        margin-bottom: 40px;
+    }
+    
+    .features-list {
+        gap: 20px;
+    }
+    
+    .feature-item {
+        justify-content: center;
+        text-align: left;
+    }
+    
+    .feature-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+    }
+    
+    .feature-text {
+        font-size: 15px;
+    }
+    
+    .hero-mockup {
+        max-width: 100%;
+        width: 100%;
+    }
+    
+    .mockup-card {
+        max-width: 360px;
+    }
+    
+    .large-card {
+        height: 180px;
+    }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+    .hero-headline {
+        font-size: 40px;
+    }
+    
+    .hero-subheading {
+        font-size: 15px;
+    }
+    
+    .mockup-card {
+        max-width: 320px;
+        padding: 30px 20px;
+    }
+    
+    .small-card {
+        height: 70px;
+        padding: 16px;
+    }
+    
+    .large-card {
+        height: 160px;
+    }
+    
+    .large-card-icon {
+        width: 64px;
+        height: 64px;
+        font-size: 28px;
+    }
+}
+
+/* ====================================
+   ANIMATIONS
+   ==================================== */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.hero-content > * {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.hero-headline {
+    animation-delay: 0.1s;
+}
+
+.hero-subheading {
+    animation-delay: 0.2s;
+}
+
+.cta-button {
+    animation-delay: 0.3s;
+}
+
+.features-list {
+    animation-delay: 0.4s;
+}
+
+.hero-mockup {
+    animation: fadeInUp 0.8s ease-out 0.3s both;
+}

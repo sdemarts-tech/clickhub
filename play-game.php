@@ -115,17 +115,6 @@ $playsRemaining = getRemainingGamePlaysForGame($_SESSION['user_id'], $gameId, $m
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($game['name']); ?> - <?php echo SITE_NAME; ?></title>
    <?php include 'includes/header-links.php'; ?>
-  
-   <script>
-const iframe = document.getElementById('myIframe');
-
-iframe.onload = function() {
-  // Adjust height after iframe content is fully loaded
-  iframe.style.height = iframe.contentWindow.document.body.scrollHeight + 'px';
-};
-</script>
-   
-  
 </head>
 <body>
     <div class="container">
@@ -143,7 +132,7 @@ iframe.onload = function() {
                     <h3>ℹ️ Game Info</h3>
                     <p><?php echo htmlspecialchars($game['description']); ?></p>
                     <ul>
-                        <li>⏱️ Cooldown: <?php echo $game['play_cooldown_minutes']; ?> minutes</li>
+                        <li>⏱️ Cooldown: <?php echo $game['play_cooldown_minutes']; ?> mins</li>
                         <li>🎯 Minimum Score: <?php echo $game['min_score_required']; ?> points</li>
                         <li>💰 Reward: Your score = Your points</li>
                     </ul>
@@ -160,11 +149,44 @@ iframe.onload = function() {
             </div>
 
             <div class="game-container">
-                <iframe src="<?php echo htmlspecialchars($game['file_path']); ?>" 
+                <?php
+                // Determine if file_path is a URL or local path
+                $filePath = $game['file_path'];
+                $isUrl = (strpos($filePath, 'http://') === 0 || strpos($filePath, 'https://') === 0);
+                
+                // If it's a URL, use it directly; otherwise, treat as local path
+                $gameSrc = $isUrl ? $filePath : htmlspecialchars($filePath);
+                
+                // Add allow attributes for external games
+                $allowAttrs = $isUrl ? 'allow="autoplay; fullscreen; microphone; camera; geolocation"' : '';
+                
+                // Sandbox permissions - more permissive for external URLs that need full functionality
+                $sandboxAttrs = $isUrl 
+                    ? 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation'
+                    : 'allow-scripts allow-same-origin allow-forms';
+                ?>
+                <iframe src="<?php echo $gameSrc; ?>" 
                         frameborder="0" 
                         width="100%" 
                     	height="1000"
-                        id="gameFrame"></iframe>
+                        id="gameFrame"
+                        <?php echo $allowAttrs; ?>
+                        scrolling="no"
+                        webkit-playsinline="true"
+                        playsinline="true"
+                        sandbox="<?php echo $sandboxAttrs; ?>"
+                        onload="try { 
+                            if (this.contentWindow && this.contentWindow.document) {
+                                this.style.height = Math.max(1000, this.contentWindow.document.body.scrollHeight) + 'px'; 
+                            }
+                        } catch(e) { 
+                            console.log('Iframe height adjustment:', e); 
+                            // For external URLs, set a reasonable default height
+                            <?php if ($isUrl): ?>
+                            this.style.height = '800px';
+                            this.style.minHeight = '600px';
+                            <?php endif; ?>
+                        }"></iframe>
             </div>
 
             <div class="game-actions">

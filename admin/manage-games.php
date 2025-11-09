@@ -14,9 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_game'])) {
     $description = sanitize($_POST['description']);
     $file_path = sanitize($_POST['file_path']);
     $featured_image = isset($_POST['featured_image']) ? sanitize($_POST['featured_image']) : '';
-    $min_score_required = intval($_POST['min_score_required']);
-    $play_cooldown_minutes = intval($_POST['play_cooldown_minutes']);
-    $max_plays_per_day = intval($_POST['max_plays_per_day']);
+    $game_category = isset($_POST['game_category']) ? sanitize($_POST['game_category']) : 'regular';
     
     if (empty($name) || empty($file_path)) {
         $error = 'Name and file path are required';
@@ -26,11 +24,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_game'])) {
             'description' => $description,
             'file_path' => $file_path,
             'scoring_type' => 'score-based',
-            'min_score_required' => $min_score_required,
-            'play_cooldown_minutes' => $play_cooldown_minutes,
-            'max_plays_per_day' => $max_plays_per_day,
+            'game_category' => $game_category,
             'status' => 'active'
         ];
+        
+        // Handle different game categories
+        if ($game_category === 'regular') {
+            // Regular games: score-based with limits
+            $gameData['game_type'] = 'normal';
+            $gameData['min_score_required'] = intval($_POST['min_score_required']);
+            $gameData['play_cooldown_minutes'] = intval($_POST['play_cooldown_minutes']);
+            $gameData['max_plays_per_day'] = intval($_POST['max_plays_per_day']);
+        } elseif ($game_category === 'time-based') {
+            // Time-based games: earn points by playing time
+            $gameData['game_type'] = 'time-based';
+            $gameData['min_score_required'] = 0;
+            $gameData['time_required'] = intval($_POST['time_required']) * 60; // Convert minutes to seconds
+            $gameData['points_per_minute'] = intval($_POST['points_per_minute']);
+            $gameData['max_time_minutes'] = !empty($_POST['max_time_minutes']) ? intval($_POST['max_time_minutes']) : null;
+            $gameData['play_cooldown_minutes'] = intval($_POST['play_cooldown_minutes'] ?? 0);
+            $gameData['max_plays_per_day'] = intval($_POST['max_plays_per_day']);
+        } else {
+            // Unlimited games have no limits
+            $gameData['game_type'] = 'normal';
+            $gameData['min_score_required'] = 0;
+            $gameData['play_cooldown_minutes'] = 0;
+            $gameData['max_plays_per_day'] = 999999; // Set to a very high number
+        }
         
         // Only add featured_image if it's not empty
         if (!empty($featured_image)) {
@@ -56,9 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_game'])) {
     $description = sanitize($_POST['description']);
     $file_path = sanitize($_POST['file_path']);
     $featured_image = isset($_POST['featured_image']) ? sanitize($_POST['featured_image']) : '';
-    $min_score_required = intval($_POST['min_score_required']);
-    $play_cooldown_minutes = intval($_POST['play_cooldown_minutes']);
-    $max_plays_per_day = intval($_POST['max_plays_per_day']);
+    $game_category = isset($_POST['game_category']) ? sanitize($_POST['game_category']) : 'regular';
     
     if (empty($name) || empty($file_path)) {
         $error = 'Name and file path are required';
@@ -67,10 +85,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_game'])) {
             'name' => $name,
             'description' => $description,
             'file_path' => $file_path,
-            'min_score_required' => $min_score_required,
-            'play_cooldown_minutes' => $play_cooldown_minutes,
-            'max_plays_per_day' => $max_plays_per_day
+            'game_category' => $game_category
         ];
+        
+        // Handle different game categories
+        if ($game_category === 'regular') {
+            // Regular games: score-based with limits
+            $gameData['game_type'] = 'normal';
+            $gameData['min_score_required'] = intval($_POST['min_score_required']);
+            $gameData['play_cooldown_minutes'] = intval($_POST['play_cooldown_minutes']);
+            $gameData['max_plays_per_day'] = intval($_POST['max_plays_per_day']);
+            // Clear time-based fields
+            $gameData['time_required'] = null;
+            $gameData['points_per_minute'] = null;
+            $gameData['max_time_minutes'] = null;
+        } elseif ($game_category === 'time-based') {
+            // Time-based games: earn points by playing time
+            $gameData['game_type'] = 'time-based';
+            $gameData['min_score_required'] = 0;
+            $gameData['time_required'] = intval($_POST['time_required']) * 60; // Convert minutes to seconds
+            $gameData['points_per_minute'] = intval($_POST['points_per_minute']);
+            $gameData['max_time_minutes'] = !empty($_POST['max_time_minutes']) ? intval($_POST['max_time_minutes']) : null;
+            $gameData['play_cooldown_minutes'] = intval($_POST['play_cooldown_minutes'] ?? 0);
+            $gameData['max_plays_per_day'] = intval($_POST['max_plays_per_day']);
+        } else {
+            // Unlimited games have no limits
+            $gameData['game_type'] = 'normal';
+            $gameData['min_score_required'] = 0;
+            $gameData['play_cooldown_minutes'] = 0;
+            $gameData['max_plays_per_day'] = 999999; // Set to a very high number
+            // Clear time-based fields
+            $gameData['time_required'] = null;
+            $gameData['points_per_minute'] = null;
+            $gameData['max_time_minutes'] = null;
+        }
         
         // Only add featured_image if it's not empty
         if (!empty($featured_image)) {
@@ -206,10 +254,20 @@ $games = $uniqueGames;
                     </div>
                 <?php endif; ?>
                 
-                <form method="POST" action="" class="admin-form">
+                <form method="POST" action="" class="admin-form" id="gameForm">
                     <?php if ($editGame): ?>
                         <input type="hidden" name="game_id" value="<?php echo $editGame['id']; ?>">
                     <?php endif; ?>
+                    
+                    <div class="form-group">
+                        <label for="game_category">Game Category *</label>
+                        <select id="game_category" name="game_category" required onchange="toggleLimitFields()">
+                            <option value="regular" <?php echo ($editGame && ($editGame['game_category'] ?? 'regular') === 'regular') ? 'selected' : ''; ?>>Regular Game (with limits, cooldown, min score)</option>
+                            <option value="time-based" <?php echo ($editGame && ($editGame['game_category'] ?? 'regular') === 'time-based') ? 'selected' : ''; ?>>⏱️ Time-Based Game (earn points by playing time)</option>
+                            <option value="unlimited" <?php echo ($editGame && ($editGame['game_category'] ?? 'regular') === 'unlimited') ? 'selected' : ''; ?>>Unlimited Game (no limits, no cooldown, no min score)</option>
+                        </select>
+                        <small>Time-Based: Players earn points by playing for a set duration</small>
+                    </div>
                     
                     <div class="form-row">
                         <div class="form-group">
@@ -218,26 +276,79 @@ $games = $uniqueGames;
                                    value="<?php echo $editGame ? htmlspecialchars($editGame['name']) : ''; ?>" required>
                         </div>
                         
-                        <div class="form-group">
+                        <div class="form-group" id="min_score_group">
                             <label for="min_score_required">Minimum Score Required *</label>
                             <input type="number" id="min_score_required" name="min_score_required" 
-                                   value="<?php echo $editGame ? $editGame['min_score_required'] : 10; ?>" required min="0">
+                                   value="<?php echo $editGame ? $editGame['min_score_required'] : 10; ?>" min="0">
                             <small>Players must reach this score to earn points</small>
                         </div>
                     </div>
                     
-                    <div class="form-row">
+                    <!-- Time-Based Game Fields -->
+                    <div class="form-row" id="time_based_fields" style="display: none;">
+                        <div class="form-group">
+                            <label for="time_required">Time Required (minutes) *</label>
+                            <input type="number" id="time_required" name="time_required" 
+                                   value="<?php echo $editGame && isset($editGame['time_required']) ? ($editGame['time_required'] / 60) : 10; ?>" 
+                                   min="1">
+                            <small>How many minutes players must play to complete</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="points_per_minute">Points Per Minute *</label>
+                            <input type="number" id="points_per_minute" name="points_per_minute" 
+                                   value="<?php echo $editGame ? ($editGame['points_per_minute'] ?? 10) : 10; ?>" 
+                                   min="1">
+                            <small>Points earned per minute of play (e.g., 10 = 100 points for 10 minutes)</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="max_time_minutes">Max Time Per Session (minutes)</label>
+                            <input type="number" id="max_time_minutes" name="max_time_minutes" 
+                                   value="<?php echo $editGame && isset($editGame['max_time_minutes']) ? $editGame['max_time_minutes'] : ''; ?>" 
+                                   min="1" placeholder="Leave empty for no max">
+                            <small>Optional: Maximum playtime per session (auto-completes when reached)</small>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row" id="limits_row">
                         <div class="form-group">
                             <label for="play_cooldown_minutes">Cooldown (minutes) *</label>
                             <input type="number" id="play_cooldown_minutes" name="play_cooldown_minutes" 
-                                   value="<?php echo $editGame ? $editGame['play_cooldown_minutes'] : 60; ?>" required min="1">
-                            <small>Time before player can replay this game</small>
+                                   value="<?php 
+                                       if ($editGame) {
+                                           $cat = $editGame['game_category'] ?? 'regular';
+                                           if ($cat === 'unlimited') {
+                                               echo 0;
+                                           } elseif ($cat === 'time-based') {
+                                               echo $editGame['play_cooldown_minutes'] ?? 0;
+                                           } else {
+                                               echo $editGame['play_cooldown_minutes'] ?? 60;
+                                           }
+                                       } else {
+                                           echo 60;
+                                       }
+                                   ?>" 
+                                   min="0">
+                            <small>Time before player can replay this game (0 = no cooldown)</small>
                         </div>
                         
                         <div class="form-group">
                             <label for="max_plays_per_day">Max Plays Per Day *</label>
                             <input type="number" id="max_plays_per_day" name="max_plays_per_day" 
-                                   value="<?php echo $editGame ? ($editGame['max_plays_per_day'] ?? 3) : 3; ?>" required min="1">
+                                   value="<?php 
+                                       if ($editGame) {
+                                           $cat = $editGame['game_category'] ?? 'regular';
+                                           if ($cat === 'unlimited') {
+                                               echo 999999;
+                                           } else {
+                                               echo $editGame['max_plays_per_day'] ?? 3;
+                                           }
+                                       } else {
+                                           echo 3;
+                                       }
+                                   ?>" 
+                                   min="1">
                             <small>How many times this game can be played per day</small>
                         </div>
                     </div>
@@ -251,8 +362,11 @@ $games = $uniqueGames;
                         <label for="file_path">File Path (URL or local path) *</label>
                         <input type="text" id="file_path" name="file_path" 
                                value="<?php echo $editGame ? htmlspecialchars($editGame['file_path']) : ''; ?>"
-                               placeholder="games/snake.html" required>
-                        <small>Example: games/snake.html or https://example.com/game.html</small>
+                               placeholder="games/snake.html or https://play.famobi.com/om-nom-run" required>
+                        <small>
+                            <strong>Local:</strong> games/snake.html or games/color-game/index.php<br>
+                            <strong>External URL:</strong> https://play.famobi.com/om-nom-run (will be embedded in iframe)
+                        </small>
                     </div>
                     
                     <div class="form-group">
@@ -274,9 +388,8 @@ $games = $uniqueGames;
                         </div>
                     </div>
                     
-                    <div class="info-box" style="margin-top:15px; background:#e7f3ff; padding:15px; border-radius:5px;">
-                        <strong>ℹ️ Note:</strong> Players earn points equal to their game score. 
-                        Make sure your game sends the score via postMessage when game ends.
+                    <div class="info-box" id="info_box" style="margin-top:15px; background:#e7f3ff; padding:15px; border-radius:5px;">
+                        <strong>ℹ️ Note:</strong> <span id="info_text">Players earn points equal to their game score. Make sure your game sends the score via postMessage when game ends.</span>
                     </div>
                     
                     <button type="submit" name="<?php echo $editGame ? 'edit_game' : 'add_game'; ?>" class="btn btn-primary">
@@ -296,6 +409,7 @@ $games = $uniqueGames;
                                 <tr>
                                     <th>Image</th>
                                     <th>Name</th>
+                                    <th>Category</th>
                                     <th>Min Score</th>
                                     <th>Cooldown</th>
                                     <th>Plays/Day</th>
@@ -321,9 +435,49 @@ $games = $uniqueGames;
                                             <strong><?php echo htmlspecialchars($game['name']); ?></strong><br>
                                             <small><?php echo htmlspecialchars(substr($game['description'], 0, 50)); ?><?php echo strlen($game['description']) > 50 ? '...' : ''; ?></small>
                                         </td>
-                                        <td><?php echo $game['min_score_required'] ?? 0; ?></td>
-                                        <td><?php echo $game['play_cooldown_minutes'] ?? 60; ?> min</td>
-                                        <td><?php echo $game['max_plays_per_day'] ?? 3; ?></td>
+                                        <td>
+                                            <?php 
+                                            $category = $game['game_category'] ?? 'regular';
+                                            if ($category === 'unlimited'): ?>
+                                                <span class="badge-success">Unlimited</span>
+                                            <?php elseif ($category === 'time-based'): ?>
+                                                <span class="badge-success" style="background: #ff9800;">⏱️ Time-Based</span>
+                                            <?php else: ?>
+                                                <span class="badge-gray">Regular</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php 
+                                            $category = $game['game_category'] ?? 'regular';
+                                            if ($category === 'unlimited'): 
+                                                echo '—';
+                                            elseif ($category === 'time-based'):
+                                                $timeRequired = isset($game['time_required']) ? ($game['time_required'] / 60) : 0;
+                                                $pointsPerMin = $game['points_per_minute'] ?? 10;
+                                                echo $timeRequired . ' min<br><small>(' . $pointsPerMin . ' pts/min)</small>';
+                                            else:
+                                                echo $game['min_score_required'] ?? 0; 
+                                            endif;
+                                            ?>
+                                        </td>
+                                        <td>
+                                            <?php 
+                                            if (($game['game_category'] ?? 'regular') === 'unlimited'): 
+                                                echo '—';
+                                            else:
+                                                echo ($game['play_cooldown_minutes'] ?? 60) . ' min';
+                                            endif;
+                                            ?>
+                                        </td>
+                                        <td>
+                                            <?php 
+                                            if (($game['game_category'] ?? 'regular') === 'unlimited'): 
+                                                echo '∞';
+                                            else:
+                                                echo $game['max_plays_per_day'] ?? 3;
+                                            endif;
+                                            ?>
+                                        </td>
                                         <td>
                                             <?php if ($game['status'] === 'active'): ?>
                                                 <span class="badge-success">Active</span>
@@ -363,6 +517,87 @@ $games = $uniqueGames;
                 preview.innerHTML = '<img src="' + url + '" alt="Preview" onerror="this.parentElement.innerHTML=\'<div class=\\\'no-preview\\\'>❌ Image not found or invalid URL</div>\'">';
             }
         }
+        
+        function toggleLimitFields() {
+            const category = document.getElementById('game_category').value;
+            const limitsRow = document.getElementById('limits_row');
+            const minScoreGroup = document.getElementById('min_score_group');
+            const timeBasedFields = document.getElementById('time_based_fields');
+            const minScoreInput = document.getElementById('min_score_required');
+            const cooldownInput = document.getElementById('play_cooldown_minutes');
+            const maxPlaysInput = document.getElementById('max_plays_per_day');
+            const timeRequiredInput = document.getElementById('time_required');
+            const pointsPerMinuteInput = document.getElementById('points_per_minute');
+            const maxTimeInput = document.getElementById('max_time_minutes');
+            const infoText = document.getElementById('info_text');
+            
+            if (category === 'unlimited') {
+                // Unlimited games: hide all limit fields
+                limitsRow.style.display = 'none';
+                minScoreGroup.style.display = 'none';
+                timeBasedFields.style.display = 'none';
+                // Remove required attributes
+                minScoreInput.removeAttribute('required');
+                cooldownInput.removeAttribute('required');
+                maxPlaysInput.removeAttribute('required');
+                timeRequiredInput.removeAttribute('required');
+                pointsPerMinuteInput.removeAttribute('required');
+                // Set values for unlimited games
+                minScoreInput.value = 0;
+                cooldownInput.value = 0;
+                maxPlaysInput.value = 999999;
+                infoText.textContent = 'Unlimited games can be played anytime without restrictions.';
+            } else if (category === 'time-based') {
+                // Time-based games: show time fields, hide score fields
+                limitsRow.style.display = '';
+                minScoreGroup.style.display = 'none';
+                timeBasedFields.style.display = '';
+                // Required fields for time-based
+                timeRequiredInput.setAttribute('required', 'required');
+                pointsPerMinuteInput.setAttribute('required', 'required');
+                cooldownInput.setAttribute('required', 'required');
+                maxPlaysInput.setAttribute('required', 'required');
+                // Not required for time-based
+                minScoreInput.removeAttribute('required');
+                // Min constraints
+                timeRequiredInput.setAttribute('min', '1');
+                pointsPerMinuteInput.setAttribute('min', '1');
+                cooldownInput.setAttribute('min', '0'); // Allow 0 for no cooldown
+                maxPlaysInput.setAttribute('min', '1');
+                // Set default values if empty
+                if (!timeRequiredInput.value) timeRequiredInput.value = 10;
+                if (!pointsPerMinuteInput.value) pointsPerMinuteInput.value = 10;
+                if (!cooldownInput.value) cooldownInput.value = 0;
+                if (!maxPlaysInput.value) maxPlaysInput.value = 3;
+                infoText.textContent = 'Time-Based: Players earn points by playing for the required duration. Timer tracks active playtime and awards points when goal is reached.';
+            } else {
+                // Regular games: show score fields, hide time fields
+                limitsRow.style.display = '';
+                minScoreGroup.style.display = '';
+                timeBasedFields.style.display = 'none';
+                // Required fields for regular games
+                minScoreInput.setAttribute('required', 'required');
+                cooldownInput.setAttribute('required', 'required');
+                maxPlaysInput.setAttribute('required', 'required');
+                // Not required for regular
+                timeRequiredInput.removeAttribute('required');
+                pointsPerMinuteInput.removeAttribute('required');
+                // Min constraints
+                minScoreInput.setAttribute('min', '0');
+                cooldownInput.setAttribute('min', '0'); // Allow 0 for no cooldown
+                maxPlaysInput.setAttribute('min', '1');
+                // Set default values if empty
+                if (!minScoreInput.value) minScoreInput.value = 10;
+                if (!cooldownInput.value) cooldownInput.value = 60;
+                if (!maxPlaysInput.value) maxPlaysInput.value = 3;
+                infoText.textContent = 'Regular: Players earn points equal to their game score. Make sure your game sends the score via postMessage when game ends.';
+            }
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleLimitFields();
+        });
     </script>
 </body>
 </html>

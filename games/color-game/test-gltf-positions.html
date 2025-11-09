@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GLTF Positions Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: #000;
+        }
+        #container {
+            width: 100vw;
+            height: 100vh;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0,0,0,0.9);
+            padding: 15px;
+            font-size: 12px;
+            z-index: 100;
+            border: 2px solid #00FF00;
+            max-width: 400px;
+        }
+        #rollBtn {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
+            font-size: 18px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 100;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div id="info">
+        <div style="color: #00FF00; font-weight: bold; margin-bottom: 10px;">🎲 GLTF POSITIONS TEST</div>
+        <div>Using EXACT positions from GLTF export</div>
+        <div style="margin-top: 10px; font-size: 11px;">
+            <div>Frame Base: (-0.6088, 0.8206, 1.541)</div>
+            <div>Dice 1: (-0.596, 0.901, 1.475)</div>
+            <div>Dice 2: (-0.763, 0.901, 1.475)</div>
+            <div>Dice 3: (-0.426, 0.901, 1.475)</div>
+            <div>Slider: (-0.601, 0.46, 1.658)</div>
+            <div>Humps: (-0.6007, 0.0903, 1.943)</div>
+            <div>Landing: (-0.596, -0.0325, 2.621)</div>
+        </div>
+        <div style="margin-top: 10px; font-size: 10px; color: #aaa;">
+            Arrow keys: Rotate camera<br>
+            Up/Down: Zoom in/out
+        </div>
+    </div>
+    <button id="rollBtn">ROLL DICE</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="js/libs/cannon.min.js"></script>
+
+    <script>
+        console.log('=== GLTF POSITIONS TEST ===');
+        console.log('Using EXACT positions from GLTF export');
+
+        const container = document.getElementById('container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        container.appendChild(renderer.domElement);
+
+        // Camera - adjust to see the scene
+        camera.position.set(0, 3, 5);
+        camera.lookAt(0, 1, 0);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 10, 5);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+
+        // Axes helper
+        const axesHelper = new THREE.AxesHelper(3);
+        scene.add(axesHelper);
+
+        // Physics world
+        const world = new CANNON.World();
+        world.gravity.set(0, -25, 0);
+
+        // ============================================
+        // EXACT POSITIONS FROM GLTF
+        // ============================================
+        const gltfPositions = {
+            // Frame structure
+            frameBottom: { x: -0.6087642723614949, y: 0.820622956720864, z: 1.5409256819252983 },
+            wall1: { x: -0.5915059979961148, y: 0, z: 1.8930633133913919 },
+            wall2: { x: -1.106, y: 0, z: 2.636 }, // Left wall?
+            wall3: { x: -0.09522204952005509, y: 0, z: 2.627318951715951 }, // Right wall?
+            wall4: { x: -0.5915059979961148, y: 0, z: 3.363533033010973 },
+            
+            // Dice
+            dice1: { x: -0.596, y: 0.900968835743474, z: 1.474951202832929 },
+            dice2: { x: -0.7630203452548225, y: 0.901, z: 1.475 },
+            dice3: { x: -0.426, y: 0.900968835743474, z: 1.474951202832929 },
+            
+            // Slide and stopper
+            slider: { x: -0.601, y: 0.46, z: 1.658 },
+            humps: { x: -0.6006664454922912, y: 0.0903202684405616, z: 1.9433297448549296 },
+            
+            // Landing area
+            landing: { x: -0.5959853687814853, y: -0.03252922242995415, z: 2.621320461936813 }
+        };
+
+        console.log('GLTF Positions:', gltfPositions);
+
+        // ============================================
+        // CREATE OBJECTS AT EXACT GLTF POSITIONS
+        // ============================================
+
+        // Landing area (platform)
+        const landingGeom = new THREE.BoxGeometry(1.004, 0.0156, 1.44);
+        const landingMaterial = new THREE.MeshStandardMaterial({ color: 0xFFD700 });
+        const landing = new THREE.Mesh(landingGeom, landingMaterial);
+        landing.position.set(
+            gltfPositions.landing.x,
+            gltfPositions.landing.y,
+            gltfPositions.landing.z
+        );
+        landing.receiveShadow = true;
+        scene.add(landing);
+        console.log('Landing area at:', landing.position);
+
+        // Frame Bottom
+        const frameBottomGeom = new THREE.BoxGeometry(0.795, 0.0281, 0.0732);
+        const frameMaterial = new THREE.MeshStandardMaterial({ color: 0x5D4037 });
+        const frameBottom = new THREE.Mesh(frameBottomGeom, frameMaterial);
+        frameBottom.position.set(
+            gltfPositions.frameBottom.x,
+            gltfPositions.frameBottom.y,
+            gltfPositions.frameBottom.z
+        );
+        frameBottom.castShadow = true;
+        frameBottom.receiveShadow = true;
+        scene.add(frameBottom);
+        console.log('Frame Bottom at:', frameBottom.position);
+
+        // Walls (4 walls under Platform node)
+        const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+        const walls = [];
+        
+        // Wall 1
+        const wall1 = new THREE.Mesh(new THREE.BoxGeometry(1, 0.1, 0.03), wallMaterial);
+        wall1.position.set(gltfPositions.wall1.x, gltfPositions.wall1.y, gltfPositions.wall1.z);
+        scene.add(wall1);
+        walls.push(wall1);
+        
+        // Wall 2 (left?)
+        const wall2 = new THREE.Mesh(new THREE.BoxGeometry(0.0005, 0.1, 1.5), wallMaterial);
+        wall2.position.set(gltfPositions.wall2.x, gltfPositions.wall2.y, gltfPositions.wall2.z);
+        wall2.rotation.y = Math.PI / 2;
+        scene.add(wall2);
+        walls.push(wall2);
+        
+        // Wall 3 (right?)
+        const wall3 = new THREE.Mesh(new THREE.BoxGeometry(0.0005, 0.1, 1.5), wallMaterial);
+        wall3.position.set(gltfPositions.wall3.x, gltfPositions.wall3.y, gltfPositions.wall3.z);
+        wall3.rotation.y = Math.PI / 2;
+        scene.add(wall3);
+        walls.push(wall3);
+        
+        // Wall 4
+        const wall4 = new THREE.Mesh(new THREE.BoxGeometry(1, 0.1, 0.03), wallMaterial);
+        wall4.position.set(gltfPositions.wall4.x, gltfPositions.wall4.y, gltfPositions.wall4.z);
+        scene.add(wall4);
+        walls.push(wall4);
+
+        // Slider (slide ramp)
+        const sliderGeom = new THREE.BoxGeometry(0.925, 1.101, 0.024);
+        const sliderMaterial = new THREE.MeshStandardMaterial({ color: 0x4E342E });
+        const slider = new THREE.Mesh(sliderGeom, sliderMaterial);
+        slider.position.set(
+            gltfPositions.slider.x,
+            gltfPositions.slider.y,
+            gltfPositions.slider.z
+        );
+        // Extract rotation from matrix (simplified - you may need to adjust)
+        slider.rotation.x = -0.64; // Approximate from matrix
+        slider.receiveShadow = true;
+        slider.castShadow = true;
+        scene.add(slider);
+        console.log('Slider at:', slider.position);
+
+        // Humps (stopper)
+        const humpsGeom = new THREE.BoxGeometry(0.925, 0.044, 0.041);
+        const humpsMaterial = new THREE.MeshStandardMaterial({ color: 0x4E342E });
+        const humps = new THREE.Mesh(humpsGeom, humpsMaterial);
+        humps.position.set(
+            gltfPositions.humps.x,
+            gltfPositions.humps.y,
+            gltfPositions.humps.z
+        );
+        humps.rotation.x = -0.64; // Approximate
+        humps.receiveShadow = true;
+        humps.castShadow = true;
+        scene.add(humps);
+        console.log('Humps at:', humps.position);
+
+        // 3 Dice
+        const diceSize = 0.15;
+        const dice = [];
+        const diceBodies = [];
+        const diceColors = [0xFF0000, 0x0080FF, 0x00FF00];
+        const dicePositions = [
+            gltfPositions.dice1,
+            gltfPositions.dice2,
+            gltfPositions.dice3
+        ];
+
+        dicePositions.forEach((pos, i) => {
+            const die = new THREE.Mesh(
+                new THREE.BoxGeometry(diceSize, diceSize, diceSize),
+                new THREE.MeshStandardMaterial({ color: diceColors[i] })
+            );
+            die.position.set(pos.x, pos.y, pos.z);
+            die.rotation.x = -0.088; // From matrix
+            die.castShadow = true;
+            scene.add(die);
+            dice.push(die);
+
+            const diceBody = new CANNON.Body({ mass: 1.8 });
+            diceBody.addShape(new CANNON.Box(new CANNON.Vec3(diceSize/2, diceSize/2, diceSize/2)));
+            diceBody.position.set(pos.x, pos.y, pos.z);
+            diceBody.velocity.set(0, 0, 0);
+            diceBody.angularVelocity.set(0, 0, 0);
+            diceBody.allowSleep = true;
+            diceBody.sleep();
+            world.addBody(diceBody);
+            diceBodies.push(diceBody);
+            
+            console.log(`Dice ${i+1} at:`, die.position);
+        });
+
+        // ============================================
+        // ROLL BUTTON
+        // ============================================
+        let frameFaded = false;
+        document.getElementById('rollBtn').addEventListener('click', () => {
+            if (frameFaded) return;
+            frameFaded = true;
+            
+            console.log('=== ROLLING DICE ===');
+            
+            // Fade out frame
+            const fadeDuration = 500;
+            const startTime = Date.now();
+            const fade = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / fadeDuration, 1);
+                const opacity = 1 - progress;
+                
+                frameBottom.material.opacity = opacity;
+                frameBottom.material.transparent = true;
+                walls.forEach(wall => {
+                    wall.material.opacity = opacity;
+                    wall.material.transparent = true;
+                });
+                
+                if (progress < 1) {
+                    requestAnimationFrame(fade);
+                } else {
+                    frameBottom.visible = false;
+                    walls.forEach(wall => wall.visible = false);
+                    
+                    diceBodies.forEach(body => {
+                        body.wakeUp();
+                    });
+                    
+                    console.log('Frame disappeared, dice falling!');
+                }
+            };
+            fade();
+        });
+
+        // ============================================
+        // ANIMATION
+        // ============================================
+        function animate() {
+            requestAnimationFrame(animate);
+            world.step(1/60);
+            
+            dice.forEach((die, i) => {
+                if (diceBodies[i]) {
+                    die.position.copy(diceBodies[i].position);
+                    die.quaternion.copy(diceBodies[i].quaternion);
+                }
+            });
+            
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Controls for camera movement
+        let cameraDistance = 5;
+        let cameraAngle = 0;
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') cameraAngle -= 0.1;
+            if (e.key === 'ArrowRight') cameraAngle += 0.1;
+            if (e.key === 'ArrowUp') cameraDistance -= 0.5;
+            if (e.key === 'ArrowDown') cameraDistance += 0.5;
+            
+            camera.position.x = Math.sin(cameraAngle) * cameraDistance;
+            camera.position.z = Math.cos(cameraAngle) * cameraDistance;
+            camera.position.y = 3;
+            camera.lookAt(0, 1, 0);
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

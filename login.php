@@ -51,7 +51,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <div class="container">
         <div class="auth-box">
-            <h1>Login</h1>
+          <img src="assets/logo.png" alt="">
+            <h1>Login to your account</h1>
             
             <?php if ($error): ?>
                 <div class="error-message"><?php echo $error; ?></div>

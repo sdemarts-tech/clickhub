@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slide Debug Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: #000;
+        }
+        #container {
+            width: 100vw;
+            height: 100vh;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            font-size: 12px;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div id="info">
+        <div>World Convention: +Y=up, -Z=front (toward camera), +Z=back</div>
+        <div>Platform: z = -4 (front) to z = +4 (back)</div>
+        <div>Frame: z = +2 (back), y = 6 (high)</div>
+        <div>Slide should end at: z = +4 (back edge of platform)</div>
+        <div>Press SPACE to drop dice</div>
+        <div style="margin-top: 10px;">
+            <button id="viewToggle" style="padding: 8px 15px; background: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer;">
+                Switch to Side View
+            </button>
+        </div>
+        <div style="margin-top: 5px; font-size: 11px; color: #aaa;">
+            Press 'V' to toggle view
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="js/libs/cannon.min.js"></script>
+
+    <script>
+        // World convention: +Y=up, -Z=front (toward camera), +Z=back
+        console.log('=== SLIDE DEBUG TEST ===');
+        console.log('World: +Y=up, -Z=front, +Z=back');
+
+        const container = document.getElementById('container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        container.appendChild(renderer.domElement);
+
+        // Camera position - front view
+        let isSideView = false;
+        const frontViewPos = { x: 0, y: 8, z: 12 };
+        const frontViewLook = { x: 0, y: 3, z: 0 };
+        const sideViewPos = { x: 15, y: 6, z: 0 };
+        const sideViewLook = { x: 0, y: 3, z: 0 };
+        
+        function updateCamera() {
+            if (isSideView) {
+                camera.position.set(sideViewPos.x, sideViewPos.y, sideViewPos.z);
+                camera.lookAt(sideViewLook.x, sideViewLook.y, sideViewLook.z);
+            } else {
+                camera.position.set(frontViewPos.x, frontViewPos.y, frontViewPos.z);
+                camera.lookAt(frontViewLook.x, frontViewLook.y, frontViewLook.z);
+            }
+        }
+        
+        updateCamera();
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 10, 5);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+
+        // Physics world
+        const world = new CANNON.World();
+        world.gravity.set(0, -25, 0);
+
+        // World axes helper
+        const axesHelper = new THREE.AxesHelper(5);
+        scene.add(axesHelper);
+
+        // ============================================
+        // PLATFORM (Yellow, centered at origin)
+        // ============================================
+        const platformSize = 8;
+        const platformHeight = 0.3;
+        
+        const platformGeom = new THREE.BoxGeometry(platformSize, platformHeight, platformSize);
+        const platformMaterial = new THREE.MeshStandardMaterial({ color: 0xFFD700 });
+        const platform = new THREE.Mesh(platformGeom, platformMaterial);
+        platform.position.set(0, platformHeight / 2, 0);
+        platform.receiveShadow = true;
+        scene.add(platform);
+
+        // Platform physics
+        const platformShape = new CANNON.Box(new CANNON.Vec3(platformSize/2, platformHeight/2, platformSize/2));
+        const platformBody = new CANNON.Body({ mass: 0 });
+        platformBody.addShape(platformShape);
+        platformBody.position.set(0, platformHeight / 2, 0);
+        world.addBody(platformBody);
+
+        console.log('Platform center: z = 0');
+        console.log('Platform extends from z =', -platformSize/2, '(front) to z =', platformSize/2, '(back)');
+
+        // ============================================
+        // SLIDE/RAMP
+        // ============================================
+        // Slide should extend from frame (z=+2) to z=-10 (further front)
+        const slideStartZ = 2;  // Frame position (back)
+        const slideStartY = 6;   // Frame height
+        const slideEndZ = -10;   // Should be at z=-10 (further toward camera)
+        const slideEndY = 0.15;  // Just above platform
+        
+        const deltaY = slideStartY - slideEndY;
+        const deltaZ = slideEndZ - slideStartZ;
+        const slideLength = Math.sqrt(deltaY * deltaY + deltaZ * deltaZ);
+        
+        const slideWidth = 6;
+        const slideThickness = 0.2;
+        
+        const slideGeom = new THREE.BoxGeometry(slideWidth, slideThickness, slideLength);
+        const slideMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x4E342E,  // Dark brown wood
+            side: THREE.DoubleSide
+        });
+        const slide = new THREE.Mesh(slideGeom, slideMaterial);
+        
+        // Position slide so bottom end reaches z=-4 (front edge of platform)
+        // After 45° X rotation: local +Z points toward world -Z (front) and down
+        // We want the BOTTOM end at z=-4, so it's in the +localZ direction
+        // After rotation: +localZ moves -cos(45°) in world Z direction
+        // So: slideMidZ - (slideLength/2) * cos(45°) = slideEndZ
+        // Therefore: slideMidZ = slideEndZ + (slideLength/2) * cos(45°)
+        const slideMidY = (slideStartY + slideEndY) / 2;
+        const slideMidZ = slideEndZ + (slideLength / 2) * Math.cos(Math.PI / 4);
+        slide.position.set(0, slideMidY, slideMidZ);
+        slide.rotation.set(0, 0, 0);
+        
+        // Rotate to tilt slide down (facing front, toward camera)
+        slide.rotation.x = Math.PI / 4; // +45° around X (tilt down toward -Z/front)
+        
+        slide.receiveShadow = true;
+        slide.castShadow = true;
+        scene.add(slide);
+
+        // Slide physics - match visual rotation and position
+        const slideShape = new CANNON.Box(new CANNON.Vec3(slideWidth/2, 0.1, slideLength/2));
+        const slideBody = new CANNON.Body({ mass: 0 });
+        slideBody.addShape(slideShape);
+        slideBody.position.set(0, slideMidY, slideMidZ);
+        slideBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), Math.PI / 4);
+        world.addBody(slideBody);
+
+        console.log('=== SLIDE INFO ===');
+        console.log('Slide start: z =', slideStartZ, ', y =', slideStartY);
+        console.log('Slide end: z =', slideEndZ, ', y =', slideEndY);
+        console.log('Slide midpoint: z =', slideMidZ, ', y =', slideMidY);
+        console.log('Slide length:', slideLength.toFixed(2));
+        console.log('Slide rotation X:', (slide.rotation.x * 180 / Math.PI).toFixed(1), 'degrees');
+        console.log('Slide should END at z =', slideEndZ, '(further toward camera)');
+
+        // ============================================
+        // FRAME (where dice start)
+        // ============================================
+        const frameGeom = new THREE.BoxGeometry(4.5, 0.2, 2);
+        const frameMaterial = new THREE.MeshStandardMaterial({ color: 0x5D4037 });
+        const frame = new THREE.Mesh(frameGeom, frameMaterial);
+        frame.position.set(0, slideStartY, slideStartZ);
+        frame.rotation.x = Math.PI / 4; // Match slide angle
+        scene.add(frame);
+
+        console.log('Frame position: z =', slideStartZ, ', y =', slideStartY);
+
+        // ============================================
+        // DICE (one test cube)
+        // ============================================
+        const diceSize = 1.5;
+        let dice = null;
+        let diceBody = null;
+
+        function createDice() {
+            if (dice) {
+                scene.remove(dice);
+                world.removeBody(diceBody);
+            }
+
+            const diceGeom = new THREE.BoxGeometry(diceSize, diceSize, diceSize);
+            const diceMat = new THREE.MeshStandardMaterial({ color: 0x0000FF }); // BLUE
+            dice = new THREE.Mesh(diceGeom, diceMat);
+            
+            // Position on frame
+            dice.position.set(0, slideStartY + diceSize/2, slideStartZ);
+            dice.castShadow = true;
+            scene.add(dice);
+
+            // Physics
+            const diceShape = new CANNON.Box(new CANNON.Vec3(diceSize/2, diceSize/2, diceSize/2));
+            diceBody = new CANNON.Body({ mass: 1.8 });
+            diceBody.addShape(diceShape);
+            diceBody.position.set(0, slideStartY + diceSize/2, slideStartZ);
+            world.addBody(diceBody);
+
+            console.log('Dice created at frame position');
+        }
+
+        createDice();
+
+        // ============================================
+        // ANIMATION
+        // ============================================
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            world.step(1/60);
+            
+            if (dice && diceBody) {
+                dice.position.copy(diceBody.position);
+                dice.quaternion.copy(diceBody.quaternion);
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        // Toggle view
+        const viewToggleBtn = document.getElementById('viewToggle');
+        viewToggleBtn.addEventListener('click', () => {
+            isSideView = !isSideView;
+            updateCamera();
+            viewToggleBtn.textContent = isSideView ? 'Switch to Front View' : 'Switch to Side View';
+        });
+        
+        // Keyboard toggle (V key) and dice drop (Space)
+        let diceDropped = false;
+        document.addEventListener('keydown', (e) => {
+            // Toggle view with V key
+            if (e.code === 'KeyV') {
+                isSideView = !isSideView;
+                updateCamera();
+                viewToggleBtn.textContent = isSideView ? 'Switch to Front View' : 'Switch to Side View';
+                return;
+            }
+            
+            // Drop dice on spacebar
+            if (e.code === 'Space' && !diceDropped && diceBody) {
+                diceDropped = true;
+                console.log('Dice dropped!');
+                console.log('Dice will slide from z =', slideStartZ, 'toward z =', slideEndZ);
+                
+                // Log dice position every frame for a few seconds
+                let frameCount = 0;
+                const logInterval = setInterval(() => {
+                    if (diceBody) {
+                        const pos = diceBody.position;
+                        console.log(`Frame ${frameCount}: Dice at z = ${pos.z.toFixed(2)}, y = ${pos.y.toFixed(2)}`);
+                        frameCount++;
+                        if (frameCount > 300) { // 5 seconds at 60fps
+                            clearInterval(logInterval);
+                            console.log('=== FINAL POSITION ===');
+                            console.log('Dice final Z:', pos.z.toFixed(2));
+                            console.log('Expected end Z:', slideEndZ);
+                            console.log('Slide ended at front?', pos.z < 0 ? 'YES (WRONG!)' : 'NO (good)');
+                            console.log('Slide ended at back?', pos.z > 2 ? 'YES (good!)' : 'NO');
+                        }
+                    }
+                }, 1000 / 60);
+            }
+        });
+
+        animate();
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
+

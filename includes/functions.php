@@ -248,6 +248,11 @@ function canPlayGame($userId, $gameId) {
     
     $cooldownMinutes = $gameResult[0]['play_cooldown_minutes'] ?? 60;
     
+    // If cooldown is 0, no cooldown - can always play
+    if ($cooldownMinutes == 0) {
+        return true;
+    }
+    
     // Get last play time for this specific game
     $url = SUPABASE_URL . '/rest/v1/' . TABLE_GAME_PLAYS . 
            '?user_id=eq.' . $userId . 

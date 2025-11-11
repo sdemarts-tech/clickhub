@@ -195,6 +195,9 @@ function getTodayCaptchaCount($userId) {
     curl_close($ch);
     
     $result = json_decode($response, true);
+    if (!is_array($result)) {
+        return 0;
+    }
     return count($result);
 }
 
@@ -272,7 +275,7 @@ function canPlayGame($userId, $gameId) {
     
     $result = json_decode($response, true);
     
-    if (empty($result)) {
+    if (!is_array($result) || empty($result)) {
         return true; // Never played before
     }
     
@@ -305,6 +308,9 @@ function getTodayGamePlaysForGame($userId, $gameId) {
     curl_close($ch);
     
     $result = json_decode($response, true);
+    if (!is_array($result)) {
+        return 0;
+    }
     return count($result);
 }
 
@@ -352,7 +358,7 @@ function getGameCooldownRemaining($userId, $gameId) {
     
     $result = json_decode($response, true);
     
-    if (empty($result)) {
+    if (!is_array($result) || empty($result)) {
         return 0; // Never played
     }
     
